@@ -1,0 +1,35 @@
+{
+  "purpose": "Fix standalone reactive startup/contact-model inconsistency and preserve the actual rejecting sample",
+  "observed38_1": {
+    "stdout_bytes": 626473,
+    "stdout_sha256": "a47f7ae54748b4f507b806d7f1b38a97d7a65fe832db927588d79a0694cd9c10",
+    "frames": [
+      [38,1,2,0,0,49,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6000,400],
+      [38,1,2,0,0,49,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6000,400],
+      [38,1,2,0,0,49,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6000,400]
+    ],
+    "ignored_after_latest": 0,
+    "finding": "Reason2and0powered intervals/commands: startup gate rejected before movement. No observed motor stall or command loss.",
+    "limitation": "38,1reread sensors afterOff before logging. These are terminal values, not necessarily the readings that caused rejection. Exact screenshot pairing and centered/straddling geometry remain unknown."
+  },
+  "change": {
+    "same_entry_point": "robot_reactivo_simple.nxc",
+    "revision": [38,2],
+    "source_sha256": "4421b2d92e465e4830f1f0c957ab55829c253e84b452e7d92ac87eea693c2160",
+    "startup": "Three consecutive non-white samples with at least one black sensor, not both black. Consistent with existing one-sided correction cases.",
+    "marker_rearm": "Same known-black/non-white contact rule for3samples. Both-white confirmation remains3. Gray/gray,mixedwhite+blackandonly2qualifying samples do not rearm.",
+    "fault_snapshot": "Do not overwrite the failing sensor snapshot by an unconditional later read. Preserve final return/watchdog resampling.",
+    "unchanged": "1/2arrangement,25/-7pairing,20white,40flat-per-drive,6000/400watchdogs,port3telemetry,24fieldlayout,graystop,111andfriendfiles",
+    "not_authorized": "No unconditional gray-forward mode, knob tuning or forced off-line placement to satisfy startup"
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 234,
+    "reactive_tests": 20,
+    "new_regressions": 4,
+    "boundary": "Entire actual NXC source compiled as C with mocked APIs, not NBC or geometry. Tests cover both one-sided starts, matching marker contact model, mixed-white rejection and preserving original fault sample.",
+    "38_1_runtime": "Startup and unused-port3logging observed; powered/reverse path not entered",
+    "38_2_nbc_and_powered_runtime": "pending"
+  },
+  "next": "Keep current physical setup. Close stale editor tab WITHOUT saving, reopen same updatedfile from disk, compile/load successfulmatchingRXE. Same centeredbeforewhiteintegratedstart; inspect38,2frames onzero-basedport2. No unchanged38,1run, calibration or isolatedcorner requested."
+}

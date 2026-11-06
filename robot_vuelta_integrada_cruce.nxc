@@ -1,0 +1,20 @@
+//37,114: integrated route, ONLY first B reference changed relative to113.
+// Video shows the intended junction passed before the far-edge stop. Four113
+// leg endpoints average710.5..760sampled counts, so1200was not usable there.
+//370is the next early candidate (~half that observed span), NOT measured B
+// localization or a distance recovered from video pixels/timestamps.
+// Keep113approach, pivot/exit, returnB450, marker budgets and all fault stops.
+// Start BEFORE white, unchanged sensors; supervise and stop on wrong departure.
+#define ROUTE_REVISION 114
+#define ROUTE_BASELINE_APPROACH 1
+#define ROUTE_FIRST_B_REFERENCE 370
+#include "robot_route_stages.nxc"
+task main()
+{
+    RunRouteAttempt();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

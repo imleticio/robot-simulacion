@@ -1,0 +1,818 @@
+// Supervised RIGHT corner diagnostic, NOT a competition program.
+// Start on the previously tested straight, BOTH light sensors on black.
+// Sensor 3 robot-left, 4 robot-right; C left drive, A right drive.
+// The local right turn is explicit test intent, not a full-route decision.
+// Approach -> both lose black -> short encoder-bounded entry advance
+// -> bounded forward pivot -> stationary check
+// -> short bounded sensor-followed exit, enabled ONLY by full confirmation.
+// Static review of this RoboSim build gives drive spacing 1.65 and motor
+// distance/count 0.4*pi/360. A small-step quarter turn needs 742.5 counts;
+// A=0/C=743 is a PROVISIONAL integer forward-pivot reference.
+// See evidence/robosim-physics-2026-11-06.json; overshoot and placement
+// still require supervised runtime validation, not just a correct yaw.
+// Unlike a center turn, this arc also translates the chassis into the bend.
+// No exact sensor-to-axle offset or track containment has been measured.
+// The entry advance is an explicitly authorized POSITIONING EXPERIMENT:
+// gray is expected there, but white/faults/caps abort before any pivot.
+// It is NOT a general recovery action or permission to drive on gray later.
+// Early both-black readings NEVER finish rotation. Missing confirmation
+// stops the test: no extra search, retry, second turn, or sounds.
+// At the encoder reference only, a stable left-only/right-only black state
+// may enable the bounded follower exit; it does NOT prove alignment.
+// No reverse is commanded. Supervise and stop manually on track departure;
+// sensors/encoders cannot prove containment or branch identity.
+#define BLACK_THRESHOLD 25
+#define WHITE_THRESHOLD 75
+#define APPROACH_STEPS 400
+#define CONTROL_INTERVAL_MS 20
+#define MOTOR_COUNT_TARGET 743
+#define TURN_POWER 15
+#ifndef TURN_SAMPLE_LIMIT
+#define TURN_SAMPLE_LIMIT 240
+#endif
+#ifndef TURN_PROGRESS_GUARD
+#define TURN_PROGRESS_GUARD 0
+#endif
+#ifndef TURN_REFRESH_COMMAND
+#define TURN_REFRESH_COMMAND 0
+#endif
+#define TURN_NO_PROGRESS_LIMIT 40
+#define CONFIRM_SAMPLES 3
+#ifndef POSITION_COUNT_TARGET
+#define POSITION_COUNT_TARGET 60
+#endif
+#define POSITION_SAMPLE_LIMIT 30
+#define POSITION_POWER 15
+#ifndef EXIT_CORRECTION_POWER
+#define EXIT_CORRECTION_POWER 15
+#endif
+#ifndef EXIT_FORWARD_POWER
+#define EXIT_FORWARD_POWER 20
+#endif
+// Optional observation-only build; default behavior remains revision 37,100.
+#ifndef CORNER_STOP_AFTER_CONFIRMATION
+#define CORNER_STOP_AFTER_CONFIRMATION 0
+#endif
+#ifndef CORNER_REVISION
+#define CORNER_REVISION (100 + CORNER_STOP_AFTER_CONFIRMATION)
+#endif
+#ifndef EXIT_MEASURE_ENCODERS
+#define EXIT_MEASURE_ENCODERS 0
+#endif
+#ifndef EXIT_REQUIRE_PROGRESS
+#define EXIT_REQUIRE_PROGRESS 0
+#endif
+#ifndef EXIT_PROGRESS_TARGET
+#define EXIT_PROGRESS_TARGET 180
+#endif
+#ifndef EXIT_CENTER_SAMPLES
+#define EXIT_CENTER_SAMPLES 5
+#endif
+// One recent run reached the old 25-step cap with final sensors on black.
+// Extend observation only; neither-black still stops without another turn.
+#ifndef EXIT_STEPS
+#define EXIT_STEPS 50
+#endif
+#ifndef ENABLE_CONTINUATION
+#define ENABLE_CONTINUATION 0
+#endif
+#if ENABLE_CONTINUATION == 1
+#include "robot_continuation_stage.nxc"
+#endif
+
+task main()
+{
+    unsigned int leftReading = 0;
+    unsigned int rightReading = 0;
+    unsigned int entryLeft = 0;
+    unsigned int entryRight = 0;
+    unsigned int confirmedLeft = 0;
+    unsigned int confirmedRight = 0;
+    unsigned int positionLeft = 30000;
+    unsigned int positionRight = 30000;
+    long startA = 30000;
+    long startC = 30000;
+    long currentA = 30000;
+    long currentC = 30000;
+    long deltaA = 0;
+    long deltaC = 0;
+    long positionStartA = 30000;
+    long positionStartC = 30000;
+    long positionCurrentA = 30000;
+    long positionCurrentC = 30000;
+    long positionDeltaA = 0;
+    long positionDeltaC = 0;
+    int approachStep = 0;
+    int turnStep;
+    int confirmStep;
+    int exitStep;
+    int positionStep;
+    int positionSamples = 0;
+    int positionReached = 0;
+    int exitSamples = 0;
+    int exitBothSamples = 0;
+    int exitLeftSamples = 0;
+    int exitRightSamples = 0;
+    int exitFinalCheck = 0;
+#if EXIT_REQUIRE_PROGRESS == 1
+    int exitCenteredSamples = 0;
+#endif
+#if EXIT_MEASURE_ENCODERS == 1
+    long exitStartA = 30000;
+    long exitStartC = 30000;
+    long exitCurrentA = 30000;
+    long exitCurrentC = 30000;
+    long exitTotalA = 0;
+    long exitTotalC = 0;
+    long exitDeltaA = 0;
+    long exitDeltaC = 0;
+    int exitMeasuredSamples = 0;
+    // 0 no measurement, 1 valid (including zero), 2 sentinel, 3 negative delta.
+    int exitEncoderStatus = 0;
+#endif
+    int turnSamples = 0;
+    int turnBothSamples = 0;
+#if TURN_REFRESH_COMMAND == 1
+    int turnRefreshCount = 0;
+    int turnPowerMismatches = 0;
+    int turnPowerBefore = 30000;
+    int turnPowerAfter = 30000;
+#endif
+#if TURN_PROGRESS_GUARD == 1
+    long turnPreviousDeltaC = 0;
+    int turnProgressSamples = 0;
+    int turnFlatSamples = 0;
+    int turnFlatRun = 0;
+    int turnLongestFlat = 0;
+#endif
+    int stable = 0;
+    int confirmationState = 0; // 0 none, 1 left-only, 2 right-only, 3 both.
+    int sampleState = 0;
+    int startValid = 0;
+    int reached = 0;
+    // Phase order: 0 approach -> 4 positioning -> 1 pivot -> 2 check -> 3 exit.
+    int phase = 0;
+    // 1 white, 2 invalid start, 3 approach limit, 4 turn sample limit,
+    // 5 encoder reference + stationary stable black-contact confirmation,
+    // 6 encoder reference but missing black, 7 wrong encoder direction,
+    // 8 unassigned encoder sentinel, 9 reserved (older center-turn versions),
+    // 10 exit step limit (bounded test end, NOT route completion),
+    // 11 neither sensor black during/after exit,
+    // 12 positioning sample limit, 13 only one positioning motor at target,
+    // 14 deliberate pre-exit stop, 15 exit progress/contact watchdog,
+    // 16 sampled two-track progress + stable both-black (NOT route success),
+    // 21 no observed pivot progress, 22 commanded pivot power not confirmed.
+    int stopReason = 2;
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+    leftReading = Sensor(IN_3);
+    rightReading = Sensor(IN_4);
+    if (leftReading < BLACK_THRESHOLD)
+    {
+        if (rightReading < BLACK_THRESHOLD)
+        {
+            startValid = 1;
+        }
+    }
+    if (leftReading > WHITE_THRESHOLD)
+    {
+        stopReason = 1;
+    }
+    if (rightReading > WHITE_THRESHOLD)
+    {
+        stopReason = 1;
+    }
+    if (startValid == 1)
+    {
+        stopReason = 3;
+        for (approachStep = 0; approachStep < APPROACH_STEPS; approachStep++)
+        {
+            leftReading = Sensor(IN_3);
+            rightReading = Sensor(IN_4);
+            if (leftReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (rightReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (leftReading < BLACK_THRESHOLD)
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    OnFwd(OUT_AC, 20);
+                }
+                else
+                {
+                    OnFwd(OUT_C, 10);
+                    OnFwd(OUT_A, 25);
+                }
+            }
+            else
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    OnFwd(OUT_C, 25);
+                    OnFwd(OUT_A, 10);
+                }
+                else
+                {
+                    entryLeft = leftReading;
+                    entryRight = rightReading;
+                    phase = 4;
+                    break;
+                }
+            }
+            Wait(CONTROL_INTERVAL_MS);
+        }
+    }
+    Off(OUT_AC);
+    if (phase == 4)
+    {
+#if POSITION_COUNT_TARGET == 0
+        // Geometry experiment: omit the positioning command entirely, rather
+        // than briefly starting motors and waiting to reach a zero target.
+        // The angle/power/contact guards of the existing pivot remain intact.
+        phase = 1;
+#else
+        stopReason = 12;
+        // Small fixed geometric offset, NOT a line search. Commands once.
+        OnFwd(OUT_AC, POSITION_POWER);
+        positionStartA = MotorRotationCount(OUT_A);
+        positionStartC = MotorRotationCount(OUT_C);
+        if (positionStartA == 30000)
+        {
+            stopReason = 8;
+        }
+        if (positionStartC == 30000)
+        {
+            stopReason = 8;
+        }
+        if (stopReason == 12)
+        {
+            for (positionStep = 0; positionStep < POSITION_SAMPLE_LIMIT; positionStep++)
+            {
+                Wait(CONTROL_INTERVAL_MS);
+                positionCurrentA = MotorRotationCount(OUT_A);
+                positionCurrentC = MotorRotationCount(OUT_C);
+                leftReading = Sensor(IN_3);
+                rightReading = Sensor(IN_4);
+                positionLeft = leftReading;
+                positionRight = rightReading;
+                positionSamples++;
+                if (leftReading > WHITE_THRESHOLD)
+                {
+                    stopReason = 1;
+                    break;
+                }
+                if (rightReading > WHITE_THRESHOLD)
+                {
+                    stopReason = 1;
+                    break;
+                }
+                if (positionCurrentA == 30000)
+                {
+                    stopReason = 8;
+                    break;
+                }
+                if (positionCurrentC == 30000)
+                {
+                    stopReason = 8;
+                    break;
+                }
+                positionDeltaA = positionCurrentA - positionStartA;
+                positionDeltaC = positionCurrentC - positionStartC;
+                if (positionDeltaA < 0)
+                {
+                    stopReason = 7;
+                    break;
+                }
+                if (positionDeltaC < 0)
+                {
+                    stopReason = 7;
+                    break;
+                }
+                if (positionDeltaA >= POSITION_COUNT_TARGET)
+                {
+                    positionReached = 1;
+                }
+                if (positionDeltaC >= POSITION_COUNT_TARGET)
+                {
+                    positionReached = 1;
+                }
+                if (positionReached == 1)
+                {
+                    // Stop at FIRST motor target, never keep advancing to
+                    // compensate for unequal travel or chase sensor contact.
+                    stopReason = 13;
+                    if (positionDeltaA >= POSITION_COUNT_TARGET)
+                    {
+                        if (positionDeltaC >= POSITION_COUNT_TARGET)
+                        {
+                            phase = 1;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+#endif
+    }
+    Off(OUT_AC);
+    if (phase == 1)
+    {
+        stopReason = 4;
+        // Keep right drive stopped; the left drive advances on an arc.
+        // Issue commands once, not per sample: preserve encoder progress.
+        Off(OUT_A);
+        OnFwd(OUT_C, TURN_POWER);
+        startA = MotorRotationCount(OUT_A);
+        startC = MotorRotationCount(OUT_C);
+        if (startA == 30000)
+        {
+            stopReason = 8;
+        }
+        if (startC == 30000)
+        {
+            stopReason = 8;
+        }
+        if (stopReason == 4)
+        {
+            for (turnStep = 0; turnStep < TURN_SAMPLE_LIMIT; turnStep++)
+            {
+#if TURN_REFRESH_COMMAND == 1
+                // Reassert the SAME forward command, not a new turn/retry.
+                // RESET_NONE is essential: keep the original C baseline.
+                turnPowerBefore = MotorPower(OUT_C);
+                if (turnPowerBefore > 100) { stopReason = 8; break; }
+                if (turnPowerBefore < -100) { stopReason = 8; break; }
+                if (turnPowerBefore != TURN_POWER) { turnPowerMismatches++; }
+                OnFwdEx(OUT_C, TURN_POWER, RESET_NONE);
+                turnRefreshCount++;
+                turnPowerAfter = MotorPower(OUT_C);
+                if (turnPowerAfter != TURN_POWER)
+                {
+                    // Cannot confirm even the commanded power: remain stopped.
+                    // A matching power still does NOT prove physical motion.
+                    stopReason = 22;
+                    break;
+                }
+#endif
+                Wait(CONTROL_INTERVAL_MS);
+                currentA = MotorRotationCount(OUT_A);
+                currentC = MotorRotationCount(OUT_C);
+                leftReading = Sensor(IN_3);
+                rightReading = Sensor(IN_4);
+                turnSamples++;
+                if (leftReading > WHITE_THRESHOLD)
+                {
+                    stopReason = 1;
+                    break;
+                }
+                if (rightReading > WHITE_THRESHOLD)
+                {
+                    stopReason = 1;
+                    break;
+                }
+                if (currentA == 30000)
+                {
+                    stopReason = 8;
+                    break;
+                }
+                if (currentC == 30000)
+                {
+                    stopReason = 8;
+                    break;
+                }
+                deltaA = currentA - startA;
+                deltaC = currentC - startC;
+                if (deltaA > 0)
+                {
+                    stopReason = 7;
+                    break;
+                }
+                if (deltaA < 0)
+                {
+                    // A is braked: any reported rotation invalidates the
+                    // ideal stopped-track reference. Do not compensate.
+                    stopReason = 7;
+                    break;
+                }
+                if (deltaC < 0)
+                {
+                    stopReason = 7;
+                    break;
+                }
+#if TURN_PROGRESS_GUARD == 1
+                // A monotonic active encoder is required. Track repeated
+                // readings separately from a slowly progressing pivot.
+                if (deltaC < turnPreviousDeltaC)
+                {
+                    stopReason = 7;
+                    break;
+                }
+                if (deltaC > turnPreviousDeltaC)
+                {
+                    turnProgressSamples++;
+                    turnFlatRun = 0;
+                }
+                else
+                {
+                    turnFlatSamples++;
+                    turnFlatRun++;
+                    if (turnFlatRun > turnLongestFlat)
+                    {
+                        turnLongestFlat = turnFlatRun;
+                    }
+                }
+                turnPreviousDeltaC = deltaC;
+                if (turnFlatRun >= TURN_NO_PROGRESS_LIMIT)
+                {
+                    stopReason = 21;
+                    break;
+                }
+#endif
+                if (leftReading < BLACK_THRESHOLD)
+                {
+                    if (rightReading < BLACK_THRESHOLD)
+                    {
+                        turnBothSamples++;
+                    }
+                }
+                if (deltaC >= MOTOR_COUNT_TARGET)
+                {
+                    reached = 1;
+                }
+                if (reached == 1)
+                {
+                    // Stop at the active motor target. No extra rotation
+                    // to compensate or search for black after the arc.
+                    phase = 2;
+                    stopReason = 6;
+                    break;
+                }
+            }
+        }
+    }
+    Off(OUT_AC);
+    if (phase == 2)
+    {
+        for (confirmStep = 0; confirmStep < CONFIRM_SAMPLES; confirmStep++)
+        {
+            // Remain stopped: confirmation must not restart either drive.
+            Off(OUT_AC);
+            Wait(CONTROL_INTERVAL_MS);
+            leftReading = Sensor(IN_3);
+            rightReading = Sensor(IN_4);
+            if (leftReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (rightReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            sampleState = 0;
+            if (leftReading < BLACK_THRESHOLD)
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    sampleState = 3;
+                }
+                else
+                {
+                    sampleState = 1;
+                }
+            }
+            else
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    sampleState = 2;
+                }
+            }
+            if (sampleState == 0)
+            {
+                break;
+            }
+            if (sampleState == confirmationState)
+            {
+                stable++;
+            }
+            else
+            {
+                confirmationState = sampleState;
+                stable = 1;
+            }
+            if (stable >= CONFIRM_SAMPLES)
+            {
+                stopReason = 5;
+            }
+        }
+    }
+    Off(OUT_AC);
+    if (CORNER_STOP_AFTER_CONFIRMATION == 1)
+    {
+        if (stopReason == 5)
+        {
+            // Deliberate observation stop, not a successful corner traversal.
+            stopReason = 14;
+        }
+    }
+    if (stopReason == 5)
+    {
+        confirmedLeft = leftReading;
+        confirmedRight = rightReading;
+        phase = 3;
+        stopReason = 10;
+#if EXIT_REQUIRE_PROGRESS == 1
+        stopReason = 15;
+#endif
+        for (exitStep = 0; exitStep < EXIT_STEPS; exitStep++)
+        {
+            leftReading = Sensor(IN_3);
+            rightReading = Sensor(IN_4);
+            if (leftReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (rightReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+#if EXIT_REQUIRE_PROGRESS == 1
+            // Only NEW samples after BOTH sampled totals reach the reference
+            // count toward contact confirmation. One black is not completion.
+            // This checks contact/progress, not geometric heading or identity.
+            if (leftReading < BLACK_THRESHOLD)
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    if (exitTotalA >= EXIT_PROGRESS_TARGET)
+                    {
+                        if (exitTotalC >= EXIT_PROGRESS_TARGET)
+                        {
+                            exitCenteredSamples++;
+                        }
+                        else { exitCenteredSamples = 0; }
+                    }
+                    else { exitCenteredSamples = 0; }
+                }
+                else { exitCenteredSamples = 0; }
+            }
+            else { exitCenteredSamples = 0; }
+            if (exitCenteredSamples >= EXIT_CENTER_SAMPLES)
+            {
+                stopReason = 16;
+                break;
+            }
+#endif
+            // Exit-only experiment: tighten steering when one sensor sees
+            // black by braking the inner track and advancing the other.
+            // Defaults are 20/20 and 0/15; wrappers may scale exit only. Lost black
+            // means STOP, never a second corner turn or reverse search.
+            if (leftReading < BLACK_THRESHOLD)
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    exitBothSamples++;
+                    OnFwd(OUT_AC, EXIT_FORWARD_POWER);
+                }
+                else
+                {
+                    exitLeftSamples++;
+                    Off(OUT_C);
+                    OnFwd(OUT_A, EXIT_CORRECTION_POWER);
+                }
+            }
+            else
+            {
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    exitRightSamples++;
+                    Off(OUT_A);
+                    OnFwd(OUT_C, EXIT_CORRECTION_POWER);
+                }
+                else
+                {
+                    stopReason = 11;
+                    break;
+                }
+            }
+#if EXIT_MEASURE_ENCODERS == 1
+            // Commands above can reset counters: baseline AFTER all commands.
+            // Measure only this Wait interval; never sum absolute counters.
+            exitStartA = MotorRotationCount(OUT_A);
+            exitStartC = MotorRotationCount(OUT_C);
+#endif
+            Wait(CONTROL_INTERVAL_MS);
+            exitSamples++;
+#if EXIT_MEASURE_ENCODERS == 1
+            // Snapshot BEFORE the next command or Off can reset counters.
+            exitCurrentA = MotorRotationCount(OUT_A);
+            exitCurrentC = MotorRotationCount(OUT_C);
+            exitEncoderStatus = 1;
+            if (exitStartA == 30000) { exitEncoderStatus = 2; }
+            if (exitStartC == 30000) { exitEncoderStatus = 2; }
+            if (exitCurrentA == 30000) { exitEncoderStatus = 2; }
+            if (exitCurrentC == 30000) { exitEncoderStatus = 2; }
+            if (exitEncoderStatus == 2)
+            {
+                stopReason = 8;
+                break;
+            }
+            exitDeltaA = exitCurrentA - exitStartA;
+            exitDeltaC = exitCurrentC - exitStartC;
+            if (exitDeltaA < 0) { exitEncoderStatus = 3; }
+            if (exitDeltaC < 0) { exitEncoderStatus = 3; }
+            if (exitEncoderStatus == 3)
+            {
+                stopReason = 7;
+                break;
+            }
+            exitTotalA = exitTotalA + exitDeltaA;
+            exitTotalC = exitTotalC + exitDeltaC;
+            exitMeasuredSamples++;
+#endif
+        }
+        Off(OUT_AC);
+        // Check again AFTER the final commanded interval, not just before
+        // it. Preserve an earlier white/loss stop reason if one occurred.
+        leftReading = Sensor(IN_3);
+        rightReading = Sensor(IN_4);
+        if (stopReason == 10)
+        {
+            exitFinalCheck = 1;
+        }
+        if (stopReason == 15)
+        {
+            exitFinalCheck = 1;
+        }
+        if (stopReason == 16)
+        {
+            exitFinalCheck = 1;
+            // Completion requires BOTH still black after braking. A partial
+            // contact stop is inconclusive, never promoted to reason 16.
+            if (leftReading >= BLACK_THRESHOLD) { stopReason = 15; }
+            if (rightReading >= BLACK_THRESHOLD) { stopReason = 15; }
+        }
+        if (exitFinalCheck == 1)
+        {
+            if (leftReading >= BLACK_THRESHOLD)
+            {
+                if (rightReading >= BLACK_THRESHOLD)
+                {
+                    stopReason = 11;
+                }
+            }
+            if (leftReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+            }
+            if (rightReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+            }
+        }
+    }
+    Off(OUT_AC);
+#if ENABLE_CONTINUATION == 1
+    if (stopReason == 16)
+    {
+        phase = 5;
+        stopReason = RunContinuationStage();
+        leftReading = continueFinalLeft;
+        rightReading = continueFinalRight;
+    }
+    Off(OUT_AC);
+#endif
+    // 39-field frame: 37,100,reason,phase,approachIndex,turnSamples,left,
+    // right,stable,startA,startC,currentA,currentC,deltaA,deltaC,
+    // turnBothSamples,motorTarget,turnSampleLimit,entryLeft,entryRight.
+    // Then exitSamples,exitBothSamples,exitLeftSamples,exitRightSamples,
+    // confirmedLeft,confirmedRight,exitStepLimit,confirmationState.
+    // Then positionSamples,positionStartA,positionStartC,positionCurrentA,
+    // positionCurrentC,positionDeltaA,positionDeltaC,positionTarget,
+    // positionSampleLimit,positionLeft,positionRight. Position sensor fields
+    // are the last sampled readings in that stage (30000 if never sampled).
+    // Position and turn deltas use separate baselines.
+    // Confirmation state describes the most recent nonzero stationary state,
+    // not success by itself: stable must reach 3. Confirmation readings are
+    // meaningful only if phase3 was entered. Motor fields remain TURN values.
+    // Counts are NOT measured chassis angle or elapsed time. Motor values
+    // were captured BEFORE Off/reset; final sensors are from the stop phase.
+    // Unused port 1 is the simulator-specific numeric log bridge.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, CORNER_REVISION);
+    SetInput(IN_1, ScaledValue, stopReason);
+    SetInput(IN_1, ScaledValue, phase);
+    SetInput(IN_1, ScaledValue, approachStep);
+    SetInput(IN_1, ScaledValue, turnSamples);
+    SetInput(IN_1, ScaledValue, leftReading);
+    SetInput(IN_1, ScaledValue, rightReading);
+    SetInput(IN_1, ScaledValue, stable);
+    SetInput(IN_1, ScaledValue, startA);
+    SetInput(IN_1, ScaledValue, startC);
+    SetInput(IN_1, ScaledValue, currentA);
+    SetInput(IN_1, ScaledValue, currentC);
+    SetInput(IN_1, ScaledValue, deltaA);
+    SetInput(IN_1, ScaledValue, deltaC);
+    SetInput(IN_1, ScaledValue, turnBothSamples);
+    SetInput(IN_1, ScaledValue, MOTOR_COUNT_TARGET);
+    SetInput(IN_1, ScaledValue, TURN_SAMPLE_LIMIT);
+    SetInput(IN_1, ScaledValue, entryLeft);
+    SetInput(IN_1, ScaledValue, entryRight);
+    SetInput(IN_1, ScaledValue, exitSamples);
+    SetInput(IN_1, ScaledValue, exitBothSamples);
+    SetInput(IN_1, ScaledValue, exitLeftSamples);
+    SetInput(IN_1, ScaledValue, exitRightSamples);
+    SetInput(IN_1, ScaledValue, confirmedLeft);
+    SetInput(IN_1, ScaledValue, confirmedRight);
+    SetInput(IN_1, ScaledValue, EXIT_STEPS);
+    SetInput(IN_1, ScaledValue, confirmationState);
+    SetInput(IN_1, ScaledValue, positionSamples);
+    SetInput(IN_1, ScaledValue, positionStartA);
+    SetInput(IN_1, ScaledValue, positionStartC);
+    SetInput(IN_1, ScaledValue, positionCurrentA);
+    SetInput(IN_1, ScaledValue, positionCurrentC);
+    SetInput(IN_1, ScaledValue, positionDeltaA);
+    SetInput(IN_1, ScaledValue, positionDeltaC);
+    SetInput(IN_1, ScaledValue, POSITION_COUNT_TARGET);
+    SetInput(IN_1, ScaledValue, POSITION_SAMPLE_LIMIT);
+    SetInput(IN_1, ScaledValue, positionLeft);
+    SetInput(IN_1, ScaledValue, positionRight);
+#if EXIT_MEASURE_ENCODERS == 1
+    // Revision 37,104 appends 8 fields to the unchanged 39-field layout.
+    // Sampled positive motor increments, NOT total travel or chassis heading.
+    // Motion outside each post-command baseline/Wait/read window is omitted.
+    // Status 1 permits zero progress; it does not certify forward travel.
+    // On faults totals include only earlier valid intervals; last raw readings
+    // identify the failed interval. Exit sensor fields still use final stop reads.
+    SetInput(IN_1, ScaledValue, exitMeasuredSamples);
+    SetInput(IN_1, ScaledValue, exitTotalA);
+    SetInput(IN_1, ScaledValue, exitTotalC);
+    SetInput(IN_1, ScaledValue, exitStartA);
+    SetInput(IN_1, ScaledValue, exitStartC);
+    SetInput(IN_1, ScaledValue, exitCurrentA);
+    SetInput(IN_1, ScaledValue, exitCurrentC);
+    SetInput(IN_1, ScaledValue, exitEncoderStatus);
+#endif
+#if EXIT_REQUIRE_PROGRESS == 1
+    // Revision 37,105: append 3 fields after the 47-field measured layout.
+    SetInput(IN_1, ScaledValue, EXIT_PROGRESS_TARGET);
+    SetInput(IN_1, ScaledValue, EXIT_CENTER_SAMPLES);
+    SetInput(IN_1, ScaledValue, exitCenteredSamples);
+#endif
+#if ENABLE_CONTINUATION == 1
+    // Revision37,106: append18 continuation-only fields after the105layout.
+    // Phase5 proves the earlier exit criterion passed, not route completion.
+    SetInput(IN_1, ScaledValue, continueSamples);
+    SetInput(IN_1, ScaledValue, continueBothSamples);
+    SetInput(IN_1, ScaledValue, continueLeftSamples);
+    SetInput(IN_1, ScaledValue, continueRightSamples);
+    SetInput(IN_1, ScaledValue, continueTotalA);
+    SetInput(IN_1, ScaledValue, continueTotalC);
+    SetInput(IN_1, ScaledValue, continueStartA);
+    SetInput(IN_1, ScaledValue, continueStartC);
+    SetInput(IN_1, ScaledValue, continueCurrentA);
+    SetInput(IN_1, ScaledValue, continueCurrentC);
+    SetInput(IN_1, ScaledValue, continueEncoderStatus);
+    SetInput(IN_1, ScaledValue, CONTINUE_COUNT_LIMIT);
+    SetInput(IN_1, ScaledValue, CONTINUE_SAMPLE_LIMIT);
+    SetInput(IN_1, ScaledValue, CONTINUE_DIFFERENCE_LIMIT);
+    SetInput(IN_1, ScaledValue, continueEntryLeft);
+    SetInput(IN_1, ScaledValue, continueEntryRight);
+    SetInput(IN_1, ScaledValue, continueFinalLeft);
+    SetInput(IN_1, ScaledValue, continueFinalRight);
+#endif
+#if TURN_PROGRESS_GUARD == 1
+    // Revision37,110 appends4 pivot-progress fields after109's68field layout.
+    // These count samples, NOT elapsed time or measured body rotation.
+    SetInput(IN_1, ScaledValue, turnProgressSamples);
+    SetInput(IN_1, ScaledValue, turnFlatSamples);
+    SetInput(IN_1, ScaledValue, turnLongestFlat);
+    SetInput(IN_1, ScaledValue, TURN_NO_PROGRESS_LIMIT);
+#endif
+#if TURN_REFRESH_COMMAND == 1
+    // Revision37,111 appends4 command-state fields after110's72field layout.
+    SetInput(IN_1, ScaledValue, turnRefreshCount);
+    SetInput(IN_1, ScaledValue, turnPowerMismatches);
+    SetInput(IN_1, ScaledValue, turnPowerBefore);
+    SetInput(IN_1, ScaledValue, turnPowerAfter);
+#endif
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

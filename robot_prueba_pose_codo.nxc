@@ -1,0 +1,8 @@
+// Silent observation diagnostic, revision 37,101, same 39-field frame.
+// Preserve revision 37,100 approach, positioning, pivot and contact checks.
+// Stop BEFORE any exit command. Reason 14 means confirmed contact followed
+// by an intentional observation stop; phase remains 2 and exitSamples is 0.
+// Other reasons preserve their original meaning. No retry or search.
+// This does not validate heading, containment, corner traversal or route.
+#define CORNER_STOP_AFTER_CONFIRMATION 1
+#include "robot_prueba_codo.nxc"

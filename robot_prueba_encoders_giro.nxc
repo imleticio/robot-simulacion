@@ -1,0 +1,58 @@
+// Silent one-shot encoder direction probe; NOT a 90-degree corner test.
+// Place on a clear black straight, not at the corner or a junction.
+// C (robot-left) forward, A (robot-right) reverse: intended robot-right turn.
+// Same power and nominal pulse duration as the forward encoder probe.
+// Equal/opposite drive predicts center rotation only in the ideal model.
+// Supervise and stop manually on departure. No automatic retry or exit.
+task main()
+{
+    long beforeA = 30000;
+    long beforeC = 30000;
+    long startA = 30000;
+    long startC = 30000;
+    long middleA = 30000;
+    long middleC = 30000;
+    long endA = 30000;
+    long endC = 30000;
+
+    Off(OUT_AC);
+    Wait(1500);
+    beforeA = MotorRotationCount(OUT_A);
+    beforeC = MotorRotationCount(OUT_C);
+    // Issue each direction command once, not on every sample: default
+    // OnFwd/OnRev reset flags must not be assumed safe for encoder control.
+    OnFwd(OUT_C, 15);
+    OnRev(OUT_A, 15);
+    startA = MotorRotationCount(OUT_A);
+    startC = MotorRotationCount(OUT_C);
+    Wait(100);
+    middleA = MotorRotationCount(OUT_A);
+    middleC = MotorRotationCount(OUT_C);
+    Wait(100);
+    endA = MotorRotationCount(OUT_A);
+    endC = MotorRotationCount(OUT_C);
+    Off(OUT_AC);
+
+    // Ten-field frame: 37,89,beforeA,beforeC,startA,startC,
+    // middleA,middleC,endA,endC. Emit only AFTER motor stop.
+    // Sentinel 30000 indicates an unassigned value, not a valid reading.
+    // Port 1 must be unused. The bridge is 16-bit: decode encoder fields
+    // as signed 16-bit when inspecting hexadecimal output (e.g. FFE1=-31).
+    // This short probe is NOT a lossless general long-value logging method.
+    // Motor counts are NOT robot heading degrees. Check fresh opcodes too.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 89);
+    SetInput(IN_1, ScaledValue, beforeA);
+    SetInput(IN_1, ScaledValue, beforeC);
+    SetInput(IN_1, ScaledValue, startA);
+    SetInput(IN_1, ScaledValue, startC);
+    SetInput(IN_1, ScaledValue, middleA);
+    SetInput(IN_1, ScaledValue, middleC);
+    SetInput(IN_1, ScaledValue, endA);
+    SetInput(IN_1, ScaledValue, endC);
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

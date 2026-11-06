@@ -1,0 +1,59 @@
+{
+  "status": "Scheduler defect reproduced and patched in a separate executable; full simulator runtime and corner validation pending",
+  "original": {
+    "path": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/legosimulator.exe",
+    "sha256": "2729698c762c1850ae1abe903dc6d519418e5647b90fb5300bd7b1b2629684a4"
+  },
+  "patched": {
+    "path": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/legosimulator-yield.exe",
+    "sha256": "c16bc269df63aa2771477e942d8e315b68e4d2360eed241da2bd28c342423b0f",
+    "branch_va": "0x40a4a4",
+    "branch_file_offset": "0x98a4",
+    "before": "eb af (jump to 0x40a455)",
+    "after": "eb a3 (jump to 0x40a449)",
+    "changed_bytes": 1,
+    "effect": "Recheck the existing wait deadline against batch-entry time after every VM step; a newly issued positive Wait returns to the controller instead of busy-spinning until budget exhaustion. Physics can update before the next VM batch."
+  },
+  "static_evidence": {
+    "controller_vm_call": "0x4049ab..0x4049bf: budget = input delta * 0.03999999910593033; call 0x40a3f0",
+    "controller_physics_call": "0x4049d4..0x4049df: Simulation::update follows the VM runner",
+    "runner_entry_wait_gate": "0x40a449..0x40a44f: interpreter deadline > entry tick returns",
+    "runner_loop": "0x40a455..0x40a4a4: elapsed wall time budget, Interpreter::step, repeat without rechecking entry gate",
+    "step_wait_gate": "0x40a544..0x40a55e: GetTickCount compared with deadline; no physics call",
+    "wait_implementation": "0x40c0c8..0x40c137: deadline = relative GetTickCount + wait operand",
+    "clock_import": "0x424078 = KERNEL32 GetTickCount (verified PE import, not SDL_GetTicks)",
+    "physics_dt_cap": "0x419fd6..0x419ff5: simulation delta above 0.5 replaced with 0.5; unchanged",
+    "motor_speed": "0x410685..0x410693: speed multiplied by 10; ordinary power15 gives150 counts/s absent other motor modes/limits",
+    "encoder_integration": "0x4113b1..0x411429: speed * physics delta updates float counters; not advanced by NXC Wait itself"
+  },
+  "reproduction": {
+    "method": "Unicorn x86 emulation of original/patched runner bytes, deterministic GetTickCount and a stub Interpreter::step implementing the inspected deadline/Wait semantics",
+    "budget_ms": 120,
+    "wait_ms": 20,
+    "original": {"samples": 6, "step_calls": 119},
+    "patched": {"samples": 1, "step_calls": 1},
+    "limitations": "VM payload is stubbed; this is not a full RXE, physics, Wine, GUI or end-to-end execution. Large budgets are a controlled counterexample, not measured frame times of historical runs."
+  },
+  "geometry_findings": [
+    "Both-black initial contact does not constrain approach heading to zero; both-gray entry does not uniquely locate axle pose or identify a corner.",
+    "A relative quarter-turn preserves entry heading error. Analytical terminal-edge examples with headings -10/0/+10 all give both-gray entry and outgoing headings80/90/100, with differing lateral positions.",
+    "These examples use hypothetical symmetric20degree sensors, not measured active angles or a surveyed scene.",
+    "Removing60counts changes ideal outgoing lateral position by0.20944sceneunits at zero entry yaw, not outgoing yaw. It cannot generically correct an unknown entry heading.",
+    "With C left/A right, left-only exit braking C and advancing A has the correct leftward differential sign. No evidence supports reversing it.",
+    "Repeated command resets and inter-command movement make exit349/192 sampled totals insufficient for exact net yaw. Aggregate contact counts also omit ordering.",
+    "Exact active sensor mounts, map edge positions, entry yaw, footprint containment and final alignment remain unmeasured. No geometry/power/angle tuning is justified by this audit."
+  ],
+  "historical_attribution": "The scheduler defect can burn sample guards on stale physical readings, but stdout has no frame timing. It is NOT proven to be the cause of C193/C683 or all stalls; dt clamping and other runtime states remain possible contributors.",
+  "preservation": "Original executable, resources, NXC, RXE, motion powers, angular references and watchdogs unchanged. Existing stdout snapshotted before alternative deployment.",
+  "stdout_snapshot": {
+    "path": "evidence/robosim-before-yield-2026-11-06.stdout.txt",
+    "bytes": 125734,
+    "sha256": "482846955e7b21c00fc72af034d806eb9028c276db8383cfd4aae01f62ff6c8a"
+  },
+  "tests": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 133,
+    "dependencies": "unicorn and pefile installed only in that temporary audit venv; seven scheduler tests skip under Python without them",
+    "scope": "124 prior host tests + 7 scheduler/patch tests + 2 analytical entry-geometry counterexamples; not simulator corner validation"
+  }
+}

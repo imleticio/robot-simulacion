@@ -1,0 +1,33 @@
+{
+  "video": "/Users/leonel/Desktop/Grabación de pantalla 2026-11-06 a las 2.44.35 a. m..mov",
+  "sha256": "e9ed67749941ff2ae76baa4c4e9545efd9f6d129ae0924c2a9741c882b16e6d9",
+  "duration_seconds": 14.89,
+  "resolution": [2184, 1284],
+  "nominal_frame_rate": "60/1",
+  "method": "2fps contact sheet of30frames, full-resolution endpoint frame at14.3s",
+  "observations": [
+    "The robot approaches the bend, performs a rightward arc, translates a short distance onto the outgoing region, and stops.",
+    "The robot is not simply stuck without motion; no second corner maneuver is shown.",
+    "The final frame alone does not establish exact alignment, actual sensor-ray footprints or whole-body containment.",
+    "The clip does not show continued tracking to the next corner or intersection."
+  ],
+  "live_log": {
+    "path": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/stdout.txt",
+    "bytes_at_review": 95657,
+    "new_frames_since79846byte_review": [
+      [37,105,16,3,246,179,0,0,3,0,0,0,746,0,746,0,743,240,49,49,144,73,3,68,49,0,200,2,14,0,0,62,62,62,62,60,30,49,49,144,206,348,0,0,15,15,1,180,5,5],
+      [37,105,16,3,97,198,0,0,3,0,0,0,743,0,743,30,743,240,49,49,130,75,55,0,0,0,200,3,17,0,0,62,62,62,62,60,30,49,49,130,292,193,0,0,2,2,1,180,5,5],
+      [37,105,16,3,100,191,0,0,3,0,0,0,745,0,745,27,743,240,49,49,124,75,49,0,0,0,200,3,17,0,0,62,62,62,62,60,30,49,49,124,273,193,0,0,5,5,1,180,5,5],
+      [37,105,16,3,115,195,0,0,3,0,0,0,746,0,746,42,743,240,49,49,148,72,76,0,0,0,200,3,16,0,0,62,62,62,62,60,30,49,49,148,318,188,0,0,3,3,1,180,5,5]
+    ],
+    "interpretation": "All four newly appended runs stopped with reason16: both sampled totals>=180 followed by five fresh both-black readings and final0/0, before200watchdog. Latestexit148,72both+76left,totalA318/C188. No ignored messages after latest frame."
+  },
+  "limitations": [
+    "Exact video-to-log-frame matching is unproven; all newly appended runs have the same criterion-stop category.",
+    "Reason16 is an intentional diagnostic endpoint, not a failure, full-corner success or route-completion event.",
+    "Earlier105reason15andreason6failures remain relevant; the four new passes do not establish matched initial poses or guaranteed repeatability.",
+    "Sampled motor increments do not establish metric distance or exact heading.",
+    "No source, sensor settings, powers, RXEs or safety limits changed during this review.",
+    "The current program deliberately stops at this criterion; no further straight or route stage is implemented."
+  ]
+}

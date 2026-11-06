@@ -1,0 +1,55 @@
+{
+  "purpose": "Prepare a separate one-file reactive comparison paired with friend's1/2sensor arrangement, not another guessed route revision",
+  "authorization": "User authorizes assistant to choose replication/adaptation after supplying friend's configuration",
+  "entry_point": "robot_reactivo_simple.nxc",
+  "frame_header": [38,1],
+  "frame_fields": 24,
+  "setup": {
+    "active_light_ports": [1,2],
+    "orientation": "Downward; opposite knob-needle arrangement visually referenced from friend's capture, not numeric angle measurement or independent physical left/right identification",
+    "inactive_ports": [3,4],
+    "telemetry": "IN_3, zero-basedport2 in stdout; never overwrite active1/2",
+    "motors": "A/Cassignments unchanged, Bunused",
+    "rollback": "Preserve3/4knob positions before disabling them; restore old3/4light/down and disable1/2before running111. OldRXEalone does not restore mounting.",
+    "physical_change_performed_by_assistant": false
+  },
+  "behavior": {
+    "both_black": "A25/C25forward",
+    "sensor1_only": "Areverse7/Cforward25, preserving friend's IDpairing not its unverifiedsidecomments",
+    "sensor2_only": "Aforward25/Creverse7",
+    "marker": "A20/C20while bounded white/release substage",
+    "both_gray": "Stop, not blindforward40or a scripted90degree pivot",
+    "marker_events": "Threebothblackarm/rearm,threebothwhiteconfirm. Firststartsound; nextrearmedreturncandidate sound+stop. No claim of all-branchcoverage/no-repeat/containment/twolaps.",
+    "safety": "Invalidinitialcontact/sensor/encoder/sign,40flat intervals on either drive,6000poweredinterval overall and400samplemarker bounds",
+    "omitted": "Map,18turnscript,angle targets,route featureflags,automaticsearch,coveragevalidationclaims"
+  },
+  "preservation": {
+    "111_baseline_hashes_match_original": true,
+    "Sim_Robot.nxc_sha256": "4d49af78674834dc5ca82955373b099c65baf38880c94c79c153c591d0147224",
+    "Sim_Robot.rxe_sha256": "a1d6607614d3e74bb902da68bc8c4d2ef739dc34b6e345584666d7e6ddec0e35",
+    "friend_files_modified": false,
+    "new_source_sha256": "87ee5c4002350f79fe6746286b18a9c8776f722313fa01f31654813ba8983085"
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 230,
+    "new_tests": 16,
+    "boundary": "Entire actual standalone NXC compiled as C with mockedIO,taskmacro renamed/notexecuted, including input/outputport isolation,sourceoperatorcheck,correctionpairing,signedcounter/stallfaults,graystop,markerrearm/resampling. NOT NBC or simulator/geometry/coverage validation.",
+    "nbc_compilation": "pending via already-openBricxCC",
+    "robosim_execution": "pending",
+    "new_rxe_generated_by_assistant": false
+  },
+  "pre_run_log_snapshot": {
+    "bytes": 620384,
+    "sha256": "362025ac3b2fb7bd41a4bde3e336d8235a9029047c96fcefe4e62654e83e8e92"
+  },
+  "scope_design_review": "Qualitative8/10, not performance. One bounded setup/controller comparison, excluding map/script/angle/graysearch/complianceclaims.10requires verified sensor-side/correction contract and minimal coverage policy based on actual motion.",
+  "limitations": [
+    "Photo alone does not establish inside-strip versus straddling footprints. Centered chassis can coexist with gray/gray in a straddling arrangement; startup/gray stop is a conservative compatibility check, not proof of physical departure. Do not force00by moving off intended line or enable blindgrayforward.",
+    "Different power, thresholds, gray policy and marker validation mean not an exact copy of friend's reported trajectory",
+    "A legitimate bend may still produce both-gray and stop; no physical lap is promised",
+    "Reactive following alone cannot certify all branches, no-repeat, containment or two laps",
+    "Do not run old3/4programs with new1/2configuration or mix oldport0/37telemetry with newport2/38,1"
+  ],
+  "next": "Configure1/2light/down as reference while leaving3/4knobs and A/Cassignments untouched, disable3/4,compile standalone file,loadonlysuccessfulmatchingRXE,startbeforewhitebothblack,one supervised integrated attempt. Stop manually on departure/steeringaway/wrongbranch."
+}

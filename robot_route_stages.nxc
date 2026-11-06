@@ -1,0 +1,596 @@
+// Integrated supervised FIRST-LAP ATTEMPT. Geometry and branch identity unvalidated.
+// Adapted from37,111: target743,power15,375pivot samples,40flat guard,
+// RESET_NONE refresh,3stationary contact samples,exit12/9,200/180/5 criterion.
+// Left pivots mirror A/C; that new motion has NOT been validated in RoboSim.
+// No reverse, retry, search, display, strings, arrays or boolean AND/OR.
+#include "robot_route_plan.nxc"
+#ifndef ROUTE_REVISION
+#define ROUTE_REVISION 112
+#endif
+#ifndef ROUTE_BASELINE_APPROACH
+#define ROUTE_BASELINE_APPROACH 0
+#endif
+#ifndef ROUTE_CONTINUOUS_FLOW
+#define ROUTE_CONTINUOUS_FLOW 0
+#endif
+#define ROUTE_BLACK 25
+#define ROUTE_WHITE 75
+#define ROUTE_INTERVAL 20
+#define ROUTE_PIVOT_TARGET 743
+#define ROUTE_PIVOT_SAMPLES 375
+#define ROUTE_FLAT_LIMIT 40
+#define ROUTE_LEG_SAMPLES 2000
+#define ROUTE_MARKER_SAMPLES 800
+#define ROUTE_MARKER_COUNTS 1800
+#define ROUTE_DIFFERENCE_LIMIT 60
+
+// Status0 means stage passed only. It NEVER certifies physical branch coverage.
+// Faults:1unexpectedwhite,2start,3legwatchdog,4pivotwatchdog,6contact,
+// 7encoderdirection,8sentinel,11unexpectedgray,15exitcriterion,21noprogress,
+// 19sampledtrackdifference,22commandreadback,23referencecontact,24markerwatchdog,25routeconfiguration,
+// 26invalidsensor. Terminal100 is a CANDIDATE one-lap sequence endpoint.
+int lapReason = 0;
+int lapPhase = 0; // 0startmarker,1releasewhite,2leg,3pivot,4contact,5exit,6returnwhite.
+int lapTurn = 0;
+int lapCompletedTurns = 0;
+int lapStarted = 0;
+int lapCandidate = 0;
+int lapLeft = 30000;
+int lapRight = 30000;
+int lapSamples = 0;
+int lapFlat = 0;
+int lapStable = 0;
+long lapTotalA = 0;
+long lapTotalC = 0;
+long lapStartA = 30000;
+long lapStartC = 30000;
+long lapCurrentA = 30000;
+long lapCurrentC = 30000;
+long lapPivotA = 0;
+long lapPivotC = 0;
+int lapRefreshes = 0;
+int lapPowerMismatches = 0;
+int lapPowerBefore = 30000;
+int lapPowerAfter = 30000;
+#if ROUTE_BASELINE_APPROACH == 1
+int lapMarkerEntered = 0;
+long lapMarkerDifferenceBase = 0;
+#endif
+#if ROUTE_CONTINUOUS_FLOW == 1
+// A commanded/contact-confirmed turn is NOT complete until outgoing following
+// reaches the next planned trigger (or the final confirmed marker).
+int lapPendingTurn = -1;
+
+int RouteBeginPending()
+{
+    if (lapPendingTurn != -1) { lapReason = 25; return 0; }
+    if (lapTurn != lapCompletedTurns) { lapReason = 25; return 0; }
+    lapPendingTurn = lapTurn;
+    return 1;
+}
+
+int RouteConfirmPending()
+{
+    if (lapPendingTurn == -1) { return 1; }
+    if (lapPendingTurn != lapCompletedTurns) { lapReason = 25; return 0; }
+    if (lapPendingTurn >= ROUTE_TURNS) { lapReason = 25; return 0; }
+    lapCompletedTurns++;
+    lapPendingTurn = -1;
+    return 1;
+}
+
+int RouteCanFinish()
+{
+    if (lapStarted != 1) { return 0; }
+    if (lapCompletedTurns == ROUTE_TURNS)
+    {
+        if (lapPendingTurn == -1) { return 1; }
+    }
+    if (lapCompletedTurns == ROUTE_TURNS - 1)
+    {
+        if (lapPendingTurn == ROUTE_TURNS - 1) { return 1; }
+    }
+    return 0;
+}
+#endif
+
+void RouteResetStage()
+{
+    lapSamples = 0;
+    lapFlat = 0;
+    lapStable = 0;
+    lapTotalA = 0;
+    lapTotalC = 0;
+    lapStartA = 30000;
+    lapStartC = 30000;
+    lapCurrentA = 30000;
+    lapCurrentC = 30000;
+}
+
+// State0 gray/no black,1left,2right,3both black,4some white,5both white.
+int RouteRead()
+{
+    int state = 0;
+    lapLeft = Sensor(IN_3);
+    lapRight = Sensor(IN_4);
+    if (lapLeft < 0) { lapReason = 26; return -1; }
+    if (lapRight < 0) { lapReason = 26; return -1; }
+    if (lapLeft > 100) { lapReason = 26; return -1; }
+    if (lapRight > 100) { lapReason = 26; return -1; }
+    if (lapLeft < ROUTE_BLACK) { state = 1; }
+    if (lapRight < ROUTE_BLACK) { state = state + 2; }
+    if (lapLeft > ROUTE_WHITE) { state = 4; }
+    if (lapRight > ROUTE_WHITE) { state = 4; }
+    if (lapLeft > ROUTE_WHITE)
+    {
+        if (lapRight > ROUTE_WHITE) { state = 5; }
+    }
+    return state;
+}
+
+// Sampled interval totals only: commands/Off may reset the underlying counters.
+// Approach mode restores111's command law; marker/exit retain12/9.
+int RouteIntervalMode(int state, int approachMode)
+{
+    long da;
+    long dc;
+    if (approachMode == 1)
+    {
+        if (state == 1) { OnFwd(OUT_C, 10); OnFwd(OUT_A, 25); }
+        else
+        {
+            if (state == 2) { OnFwd(OUT_C, 25); OnFwd(OUT_A, 10); }
+            else { OnFwd(OUT_AC, 20); }
+        }
+    }
+    else
+    {
+        if (state == 1) { Off(OUT_C); OnFwd(OUT_A, 9); }
+        else
+        {
+            if (state == 2) { Off(OUT_A); OnFwd(OUT_C, 9); }
+            else { OnFwd(OUT_AC, 12); }
+        }
+    }
+    lapStartA = MotorRotationCount(OUT_A);
+    lapStartC = MotorRotationCount(OUT_C);
+    if (lapStartA == 30000) { lapReason = 8; return 0; }
+    if (lapStartC == 30000) { lapReason = 8; return 0; }
+    Wait(ROUTE_INTERVAL);
+    lapSamples++;
+    lapCurrentA = MotorRotationCount(OUT_A);
+    lapCurrentC = MotorRotationCount(OUT_C);
+    if (lapCurrentA == 30000) { lapReason = 8; return 0; }
+    if (lapCurrentC == 30000) { lapReason = 8; return 0; }
+    da = lapCurrentA - lapStartA;
+    dc = lapCurrentC - lapStartC;
+    if (da < 0) { lapReason = 7; return 0; }
+    if (dc < 0) { lapReason = 7; return 0; }
+    lapTotalA = lapTotalA + da;
+    lapTotalC = lapTotalC + dc;
+    if (da + dc == 0) { lapFlat++; }
+    else { lapFlat = 0; }
+    if (lapFlat >= ROUTE_FLAT_LIMIT) { lapReason = 21; return 0; }
+    return 1;
+}
+
+int RouteInterval(int state)
+{
+    return RouteIntervalMode(state, 0);
+}
+
+// markerMode0: seek/start;1: leave initial white;2: seek candidate finish.
+// Only this stage permits white. No general-purpose gray advance is allowed.
+int RouteMarker(int markerMode)
+{
+    int state;
+    int accepted = 0;
+    int approachMode = 0;
+    long difference;
+    RouteResetStage();
+#if ROUTE_BASELINE_APPROACH == 1
+    lapMarkerEntered = 0;
+    lapMarkerDifferenceBase = 0;
+    if (markerMode == 1) { lapMarkerEntered = 1; }
+#endif
+    if (markerMode < 0) { lapReason = 25; Off(OUT_AC); return 0; }
+    if (markerMode > 2) { lapReason = 25; Off(OUT_AC); return 0; }
+    if (markerMode == 2)
+    {
+#if ROUTE_CONTINUOUS_FLOW == 1
+        if (RouteCanFinish() == 0) { lapReason = 25; Off(OUT_AC); return 0; }
+#else
+        if (lapStarted != 1) { lapReason = 25; Off(OUT_AC); return 0; }
+        if (lapCompletedTurns != ROUTE_TURNS) { lapReason = 25; Off(OUT_AC); return 0; }
+#endif
+    }
+    while (lapSamples < ROUTE_MARKER_SAMPLES)
+    {
+        state = RouteRead();
+        if (state < 0) { break; }
+        if (state == 0) { lapReason = 11; break; }
+#if ROUTE_BASELINE_APPROACH == 1
+        // White-contact latches the crossing substage. Do not include earlier
+        // approach steering in the short marker-only difference budget.
+        if (lapMarkerEntered == 0)
+        {
+            if (state >= 4)
+            {
+                lapMarkerEntered = 1;
+                lapMarkerDifferenceBase = lapTotalA - lapTotalC;
+            }
+        }
+        approachMode = 0;
+        if (lapMarkerEntered == 0) { approachMode = 1; }
+#endif
+        if (markerMode == 1)
+        {
+            if (state == 3) { lapStable++; }
+            else { lapStable = 0; }
+        }
+        else
+        {
+            if (state == 5) { lapStable++; }
+            else { lapStable = 0; }
+        }
+        if (lapStable >= 3) { accepted = 1; break; }
+        if (lapTotalA + lapTotalC >= 2 * ROUTE_MARKER_COUNTS)
+        {
+            lapReason = 24;
+            break;
+        }
+        if (RouteIntervalMode(state, approachMode) == 0) { break; }
+#if ROUTE_BASELINE_APPROACH == 1
+        if (lapMarkerEntered == 1)
+        {
+#endif
+        difference = lapTotalA - lapTotalC;
+#if ROUTE_BASELINE_APPROACH == 1
+        difference = difference - lapMarkerDifferenceBase;
+#endif
+        if (difference >= ROUTE_DIFFERENCE_LIMIT) { lapReason = 19; break; }
+        if (difference <= -ROUTE_DIFFERENCE_LIMIT) { lapReason = 19; break; }
+#if ROUTE_BASELINE_APPROACH == 1
+        }
+#endif
+    }
+    Off(OUT_AC);
+    if (accepted == 0)
+    {
+        if (lapReason == 0) { lapReason = 24; }
+        return 0;
+    }
+    state = RouteRead();
+    if (state < 0) { return 0; }
+    if (markerMode == 1)
+    {
+        if (state != 3) { lapReason = 23; return 0; }
+    }
+    else
+    {
+        if (state != 5) { lapReason = 23; return 0; }
+        if (markerMode == 2)
+        {
+#if ROUTE_CONTINUOUS_FLOW == 1
+            if (RouteCanFinish() == 0) { lapReason = 25; return 0; }
+            if (RouteConfirmPending() == 0) { return 0; }
+#else
+            if (lapStarted != 1) { lapReason = 25; return 0; }
+            if (lapCompletedTurns != ROUTE_TURNS) { lapReason = 25; return 0; }
+#endif
+            lapCandidate = 1;
+        }
+        else { lapStarted = 1; }
+        PlayTone(440, 300);
+        Wait(300); // Motors are stopped; sound at each accepted marker passage.
+    }
+    return 1;
+}
+
+// Edge-triggered corners must have made some forward progress first. This
+// distinguishes a new edge event from starting a stage already off the strip.
+int RouteFollow()
+{
+    int state;
+    int accepted = 0;
+#if ROUTE_BASELINE_APPROACH == 0
+    long difference;
+#endif
+    int sampleLimit = ROUTE_LEG_SAMPLES;
+#if ROUTE_BASELINE_APPROACH == 1
+    // First approach uses the tested111400sample budget, NOT an increased cap.
+    // Later, longer candidate legs retain112's2000sample watchdog.
+    if (lapTurn == 0) { sampleLimit = 400; }
+#endif
+    RouteResetStage();
+    while (lapSamples < sampleLimit)
+    {
+        state = RouteRead();
+        if (state < 0) { break; }
+        if (state >= 4) { lapReason = 1; break; }
+        if (state == 0)
+        {
+            if (routeTrigger == ROUTE_EDGE)
+            {
+                if (lapTotalA + lapTotalC >= 60) { accepted = 1; }
+            }
+            if (accepted == 0) { lapReason = 11; }
+            break;
+        }
+        if (routeTrigger == ROUTE_REFERENCE)
+        {
+            if (lapTotalA + lapTotalC >= 2 * routeReference)
+            {
+                // Contact is necessary, NOT proof of being at the junction.
+                if (state == 3) { accepted = 1; }
+                else { lapReason = 23; }
+                break;
+            }
+        }
+        if (RouteIntervalMode(state, ROUTE_BASELINE_APPROACH) == 0) { break; }
+#if ROUTE_BASELINE_APPROACH == 0
+        //112compatibility: this short-diagnostic limit was misapplied to a leg.
+        //113uses111approach instead, with sensor/encoder/progress/sample guards.
+        difference = lapTotalA - lapTotalC;
+        if (difference >= ROUTE_DIFFERENCE_LIMIT) { lapReason = 19; break; }
+        if (difference <= -ROUTE_DIFFERENCE_LIMIT) { lapReason = 19; break; }
+#endif
+    }
+    Off(OUT_AC);
+    if (accepted == 0)
+    {
+        if (lapReason == 0) { lapReason = 3; }
+        return 0;
+    }
+    // Do not let stopping hide a sensor fault or unexpected white.
+    state = RouteRead();
+    if (state < 0) { return 0; }
+    if (state >= 4) { lapReason = 1; return 0; }
+    if (routeTrigger == ROUTE_REFERENCE)
+    {
+        if (state != 3) { lapReason = 23; return 0; }
+    }
+    return 1;
+}
+
+int RoutePivot()
+{
+    int activePort = OUT_C;
+    int stoppedPort = OUT_A;
+    int reached = 0;
+    int state;
+    int confirmationState = 0;
+    int sample;
+    long activeDelta;
+    long stoppedDelta;
+    long previous = 0;
+    RouteResetStage();
+    lapPivotA = 0;
+    lapPivotC = 0;
+    lapRefreshes = 0;
+    lapPowerMismatches = 0;
+    lapPowerBefore = 30000;
+    lapPowerAfter = 30000;
+    if (routeDirection == ROUTE_LEFT) { activePort = OUT_A; stoppedPort = OUT_C; }
+    else
+    {
+        if (routeDirection != ROUTE_RIGHT) { lapReason = 25; return 0; }
+    }
+    Off(stoppedPort);
+    OnFwd(activePort, 15);
+    lapStartA = MotorRotationCount(OUT_A);
+    lapStartC = MotorRotationCount(OUT_C);
+    if (lapStartA == 30000) { lapReason = 8; }
+    if (lapStartC == 30000) { lapReason = 8; }
+    while (lapSamples < ROUTE_PIVOT_SAMPLES)
+    {
+        if (lapReason != 0) { break; }
+        lapPowerBefore = MotorPower(activePort);
+        if (lapPowerBefore < -100) { lapReason = 8; break; }
+        if (lapPowerBefore > 100) { lapReason = 8; break; }
+        if (lapPowerBefore != 15) { lapPowerMismatches++; }
+        OnFwdEx(activePort, 15, RESET_NONE);
+        lapRefreshes++;
+        lapPowerAfter = MotorPower(activePort);
+        if (lapPowerAfter != 15) { lapReason = 22; break; }
+        Wait(ROUTE_INTERVAL);
+        lapSamples++;
+        lapCurrentA = MotorRotationCount(OUT_A);
+        lapCurrentC = MotorRotationCount(OUT_C);
+        state = RouteRead();
+        if (state < 0) { break; }
+        if (state >= 4) { lapReason = 1; break; }
+        if (lapCurrentA == 30000) { lapReason = 8; break; }
+        if (lapCurrentC == 30000) { lapReason = 8; break; }
+        lapPivotA = lapCurrentA - lapStartA;
+        lapPivotC = lapCurrentC - lapStartC;
+        activeDelta = lapPivotC;
+        stoppedDelta = lapPivotA;
+        if (routeDirection == ROUTE_LEFT)
+        {
+            activeDelta = lapPivotA;
+            stoppedDelta = lapPivotC;
+        }
+        if (stoppedDelta != 0) { lapReason = 7; break; }
+        if (activeDelta < previous) { lapReason = 7; break; }
+        if (activeDelta == previous) { lapFlat++; }
+        else { lapFlat = 0; }
+        previous = activeDelta;
+        if (lapFlat >= ROUTE_FLAT_LIMIT) { lapReason = 21; break; }
+        if (activeDelta >= ROUTE_PIVOT_TARGET) { reached = 1; break; }
+    }
+    Off(OUT_AC);
+    if (lapReason != 0) { return 0; }
+    if (reached == 0) { lapReason = 4; return 0; }
+    lapPhase = 4;
+    for (sample = 0; sample < 3; sample++)
+    {
+        Wait(ROUTE_INTERVAL);
+        state = RouteRead();
+        if (state < 0) { return 0; }
+        if (state >= 4) { lapReason = 1; return 0; }
+        if (state == 0) { lapReason = 6; return 0; }
+        if (state == confirmationState) { lapStable++; }
+        else { confirmationState = state; lapStable = 1; }
+    }
+    if (lapStable < 3) { lapReason = 6; return 0; }
+    return 1;
+}
+
+int RouteExit()
+{
+    int state;
+    int accepted = 0;
+    RouteResetStage();
+    while (lapSamples < 200)
+    {
+        state = RouteRead();
+        if (state < 0) { break; }
+        if (state >= 4) { lapReason = 1; break; }
+        if (state == 0) { lapReason = 11; break; }
+        if (state == 3)
+        {
+            if (lapTotalA >= 180)
+            {
+                if (lapTotalC >= 180) { lapStable++; }
+                else { lapStable = 0; }
+            }
+            else { lapStable = 0; }
+        }
+        else { lapStable = 0; }
+        if (lapStable >= 5) { accepted = 1; break; }
+        if (RouteInterval(state) == 0) { break; }
+    }
+    Off(OUT_AC);
+    if (accepted == 0)
+    {
+        if (lapReason == 0) { lapReason = 15; }
+        return 0;
+    }
+    state = RouteRead();
+    if (state < 0) { return 0; }
+    if (state >= 4) { lapReason = 1; return 0; }
+    if (state == 0) { lapReason = 11; return 0; }
+    if (state != 3) { lapReason = 15; return 0; }
+    return 1;
+}
+
+//112:24fields;113..115:26fields;116:27fields, adding pending outgoing turn.
+// Call only with motors stopped. No per-sample logging.
+void RouteLog()
+{
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, ROUTE_REVISION);
+    SetInput(IN_1, ScaledValue, lapReason);
+    SetInput(IN_1, ScaledValue, lapPhase);
+    SetInput(IN_1, ScaledValue, lapTurn);
+    SetInput(IN_1, ScaledValue, lapCompletedTurns);
+    SetInput(IN_1, ScaledValue, routeDirection);
+    SetInput(IN_1, ScaledValue, routeTrigger);
+    SetInput(IN_1, ScaledValue, routeReference);
+    SetInput(IN_1, ScaledValue, lapSamples);
+    SetInput(IN_1, ScaledValue, lapLeft);
+    SetInput(IN_1, ScaledValue, lapRight);
+    SetInput(IN_1, ScaledValue, lapTotalA);
+    SetInput(IN_1, ScaledValue, lapTotalC);
+    SetInput(IN_1, ScaledValue, lapPivotA);
+    SetInput(IN_1, ScaledValue, lapPivotC);
+    SetInput(IN_1, ScaledValue, lapFlat);
+    SetInput(IN_1, ScaledValue, lapStable);
+    SetInput(IN_1, ScaledValue, lapRefreshes);
+    SetInput(IN_1, ScaledValue, lapPowerMismatches);
+    SetInput(IN_1, ScaledValue, lapPowerBefore);
+    SetInput(IN_1, ScaledValue, lapPowerAfter);
+    SetInput(IN_1, ScaledValue, lapStarted);
+    SetInput(IN_1, ScaledValue, lapCandidate);
+#if ROUTE_BASELINE_APPROACH == 1
+    SetInput(IN_1, ScaledValue, lapMarkerEntered);
+    SetInput(IN_1, ScaledValue, lapMarkerDifferenceBase);
+#endif
+#if ROUTE_CONTINUOUS_FLOW == 1
+    SetInput(IN_1, ScaledValue, lapPendingTurn);
+#endif
+}
+
+void RunRouteAttempt()
+{
+    int sample;
+    int state;
+    int ok;
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+    // Three stationary both-black readings before seeking the first white.
+    for (sample = 0; sample < 3; sample++)
+    {
+        state = RouteRead();
+        if (state < 0) { break; }
+        if (state != 3) { lapReason = 2; break; }
+        Wait(ROUTE_INTERVAL);
+    }
+    if (lapReason == 0)
+    {
+        ok = RouteMarker(0);
+        RouteLog();
+        if (ok == 1)
+        {
+            lapPhase = 1;
+            ok = RouteMarker(1);
+            RouteLog();
+        }
+    }
+    for (lapTurn = 0; lapTurn < ROUTE_TURNS; lapTurn++)
+    {
+        if (lapReason != 0) { break; }
+        if (ConfigureRouteTurn(lapTurn) == 0) { lapReason = 25; break; }
+        lapPhase = 2;
+        ok = RouteFollow();
+#if ROUTE_CONTINUOUS_FLOW == 1
+        if (ok == 1) { ok = RouteConfirmPending(); }
+#endif
+        RouteLog();
+        if (ok == 0) { break; }
+        lapPhase = 3;
+        ok = RoutePivot();
+#if ROUTE_CONTINUOUS_FLOW == 1
+        if (ok == 1)
+        {
+            if (lapTurn > 0) { ok = RouteBeginPending(); }
+        }
+#endif
+        RouteLog();
+        if (ok == 0) { break; }
+#if ROUTE_CONTINUOUS_FLOW == 1
+        // Keep the first tested exit as the unchanged origin of B450. Later
+        // outgoing legs use the continuous follower, not a200interval test gate.
+        if (lapTurn == 0)
+        {
+#endif
+        lapPhase = 5;
+        ok = RouteExit();
+        if (ok == 1) { lapCompletedTurns++; }
+        RouteLog();
+        if (ok == 0) { break; }
+#if ROUTE_CONTINUOUS_FLOW == 1
+        }
+#endif
+    }
+    if (lapReason == 0)
+    {
+#if ROUTE_CONTINUOUS_FLOW == 1
+        if (RouteCanFinish() == 1)
+#else
+        if (lapCompletedTurns == ROUTE_TURNS)
+#endif
+        {
+            lapPhase = 6;
+            ok = RouteMarker(2);
+            if (ok == 1) { lapReason = 100; }
+        }
+        else { lapReason = 25; }
+    }
+    Off(OUT_AC);
+    RouteRead();
+    RouteLog();
+}

@@ -1,0 +1,13 @@
+{
+  "executable": "legosimulator-yield.exe",
+  "observed_process": "PID64680",
+  "log_bytes": 7926,
+  "program_revision": [37,108],
+  "second_complete_frame": [37,108,16,3,203,200,0,0,3,0,0,0,746,0,746,31,743,240,49,49,151,75,76,0,0,0,200,3,0,30000,30000,30000,30000,0,0,0,30,30000,30000,151,327,190,0,0,3,3,1,180,5,5],
+  "interpretation": "Second consecutive criterion pass observed on the patched instance. PivotA0/C746in200samples; exit151intervals75both+76left; sampledA327/C190; freshboth-black5 and stopped0/0. No ignored messages after latest frame.",
+  "limitations": [
+    "Both patched runs passed but this does not establish exact pose matching, scheduler correctness under all loads, historical failure attribution or a geometric fix.",
+    "76one-sided correction intervals remain; no metric distance, heading, containment or route validation follows.",
+    "Next109build preserves108no-pre-advance geometry and enables only the existing bounded continuation; no steering/pivot retuning."
+  ]
+}

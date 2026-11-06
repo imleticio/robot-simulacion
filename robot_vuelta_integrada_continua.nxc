@@ -1,0 +1,21 @@
+//37,116: integrated continuous outgoing following after B, NOT repeated exit tests.
+// Preserve first tested exit (B450origin), same route/numeric seeds/pivot policy.
+// ReturnB450nowstarts after pivot6rather than exit6; that seed is unvalidated.
+// For turns1..17, full pivot + stationary contact -> ongoing111line follower.
+// Count that outgoing leg only at its next trigger or final confirmed marker.
+// Sensor/encoder/progress/sample guards remain. No reverse/search/retry added.
+// Pending progress is NOT proof of physical coverage; supervise the whole route.
+#define ROUTE_REVISION 116
+#define ROUTE_BASELINE_APPROACH 1
+#define ROUTE_FIRST_B_REFERENCE 450
+#define ROUTE_CONTINUOUS_FLOW 1
+#include "robot_route_stages.nxc"
+task main()
+{
+    RunRouteAttempt();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

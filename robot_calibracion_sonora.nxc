@@ -1,0 +1,74 @@
+// Stationary, one-shot sensor measurement, reported as decimal digits.
+// Port 3 header: one low tone. Port 4 header: two low tones.
+// Three digit groups per port: hundreds, tens, units.
+// Zero: one long medium tone. 1..9: that many short high tones.
+// Restart/reload for another surface. No display or string operations.
+void ReportDigit(int digit)
+{
+    int pulse;
+    if (digit == 0)
+    {
+        PlayTone(700, 700);
+        Wait(1000);
+    }
+    else
+    {
+        for (pulse = 0; pulse < digit; pulse++)
+        {
+            PlayTone(1200, 120);
+            Wait(300);
+        }
+    }
+    Wait(1800);
+}
+
+void ReportValue(int value)
+{
+    ReportDigit(value / 100);
+    ReportDigit((value / 10) % 10);
+    ReportDigit(value % 10);
+}
+
+task main()
+{
+    unsigned long total3 = 0;
+    unsigned long total4 = 0;
+    int sample;
+    int average3;
+    int average4;
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(2000);
+
+    for (sample = 0; sample < 25; sample++)
+    {
+        total3 += Sensor(IN_3);
+        total4 += Sensor(IN_4);
+        Wait(20);
+    }
+    average3 = total3 / 25;
+    average4 = total4 / 25;
+
+    // Reject values outside the expected percent scale, rather than
+    // emitting an ambiguous decimal report. Error: one long low tone.
+    if ((average3 > 100) || (average4 > 100))
+    {
+        PlayTone(220, 2000);
+        Wait(2500);
+    }
+    else
+    {
+        PlayTone(330, 300);
+        Wait(1500);
+        ReportValue(average3);
+        Wait(1500);
+        PlayTone(330, 300);
+        Wait(700);
+        PlayTone(330, 300);
+        Wait(1500);
+        ReportValue(average4);
+    }
+    Off(OUT_AC);
+}

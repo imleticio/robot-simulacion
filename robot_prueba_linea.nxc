@@ -1,0 +1,90 @@
+// Short, supervised tracking test, NOT the competition program.
+// Observed configuration: sensor 3 left, sensor 4 right;
+// motor C left, motor A right. Positive power moves forward.
+// Start on a black straight, with BOTH sensor footprints on black.
+// No route decisions, marker traversal, recovery or lap counting.
+// Stop on loss of black at both sensors, white at either sensor,
+// or after the bounded test duration. Not a guarantee against departure.
+#define BLACK_THRESHOLD 25
+#define WHITE_THRESHOLD 75
+#define BASE_POWER 20
+#define CORRECTION_SLOW 10
+#define CORRECTION_FAST 25
+#define CONTROL_INTERVAL_MS 20
+#define TEST_STEPS 400
+
+task main()
+{
+    unsigned int leftReading;
+    unsigned int rightReading;
+    int step;
+    int stopReason = 3; // 1: white, 2: no black, 3: step limit.
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+
+    for (step = 0; step < TEST_STEPS; step++)
+    {
+        leftReading = Sensor(IN_3);
+        rightReading = Sensor(IN_4);
+        // This RoboSim reports ignored AND/OR bytecodes. Use only
+        // simple comparisons and nested branches, not boolean operators.
+        if (leftReading > WHITE_THRESHOLD)
+        {
+            stopReason = 1;
+            break;
+        }
+        if (rightReading > WHITE_THRESHOLD)
+        {
+            stopReason = 1;
+            break;
+        }
+
+        if (leftReading < BLACK_THRESHOLD)
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                OnFwd(OUT_AC, BASE_POWER);
+            }
+            else
+            {
+                // Black is to the left: slow left track, accelerate right.
+                OnFwd(OUT_C, CORRECTION_SLOW);
+                OnFwd(OUT_A, CORRECTION_FAST);
+            }
+        }
+        else
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                OnFwd(OUT_C, CORRECTION_FAST);
+                OnFwd(OUT_A, CORRECTION_SLOW);
+            }
+            else
+            {
+                stopReason = 2;
+                break;
+            }
+        }
+        Wait(CONTROL_INTERVAL_MS);
+    }
+
+    Off(OUT_AC);
+    // Numeric telemetry through the experimentally verified stdout bridge.
+    // Port 1 must remain unused. Frame: 37, 82, reason, step, left, right.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 82);
+    SetInput(IN_1, ScaledValue, stopReason);
+    SetInput(IN_1, ScaledValue, step);
+    SetInput(IN_1, ScaledValue, leftReading);
+    SetInput(IN_1, ScaledValue, rightReading);
+
+    // Stay stopped without relying on RoboSim's task-end handling.
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

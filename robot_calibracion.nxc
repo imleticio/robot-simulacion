@@ -1,0 +1,63 @@
+// Stationary diagnostic. No surface thresholds are assumed.
+// Run separately from every driving program.
+#define SAMPLE_COUNT 100
+#define SAMPLE_INTERVAL_MS 20
+
+task main()
+{
+    unsigned int value3;
+    unsigned int value4;
+    unsigned int minimum3;
+    unsigned int minimum4;
+    unsigned int maximum3;
+    unsigned int maximum4;
+    unsigned long total3;
+    unsigned long total4;
+    int sample;
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(500);
+
+    ClearScreen();
+    TextOut(0, LCD_LINE1, "CAL: MOTORS OFF");
+    TextOut(0, LCD_LINE3, "Sampling...");
+
+    while (true)
+    {
+        minimum3 = 65535;
+        minimum4 = 65535;
+        maximum3 = 0;
+        maximum4 = 0;
+        total3 = 0;
+        total4 = 0;
+
+        for (sample = 0; sample < SAMPLE_COUNT; sample++)
+        {
+            value3 = Sensor(IN_3);
+            value4 = Sensor(IN_4);
+            if (value3 < minimum3) minimum3 = value3;
+            if (value4 < minimum4) minimum4 = value4;
+            if (value3 > maximum3) maximum3 = value3;
+            if (value4 > maximum4) maximum4 = value4;
+            total3 += value3;
+            total4 += value4;
+            Wait(SAMPLE_INTERVAL_MS);
+        }
+
+        ClearScreen();
+        TextOut(0, LCD_LINE1, "CAL: MOTORS OFF");
+        TextOut(0, LCD_LINE2, "PORT MIN AVG MAX");
+        TextOut(0, LCD_LINE3, "3");
+        NumOut(18, LCD_LINE3, minimum3);
+        NumOut(42, LCD_LINE3, total3 / SAMPLE_COUNT);
+        NumOut(72, LCD_LINE3, maximum3);
+        TextOut(0, LCD_LINE4, "4");
+        NumOut(18, LCD_LINE4, minimum4);
+        NumOut(42, LCD_LINE4, total4 / SAMPLE_COUNT);
+        NumOut(72, LCD_LINE4, maximum4);
+        TextOut(0, LCD_LINE6, "100 samples/window");
+        TextOut(0, LCD_LINE7, "Keep robot still");
+    }
+}

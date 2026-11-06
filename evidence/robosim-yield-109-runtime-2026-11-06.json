@@ -1,0 +1,25 @@
+{
+  "executable": "legosimulator-yield.exe",
+  "sha256_verified": "c16bc269df63aa2771477e942d8e315b68e4d2360eed241da2bd28c342423b0f",
+  "observed_process": "PID72609",
+  "editor_process": "BricxCC.exe PID70692",
+  "log_bytes": 10591,
+  "stderr_empty": true,
+  "program_revision": [37,109],
+  "complete_frames": [
+    [37,109,4,1,120,240,49,0,0,0,0,0,165,0,165,0,743,240,49,49,0,0,0,0,0,0,200,0,0,30000,30000,30000,30000,0,0,0,30,30000,30000,0,0,0,30000,30000,30000,30000,0,180,5,0,0,0,0,0,0,0,30000,30000,30000,30000,0,180,120,60,30000,30000,30000,30000],
+    [37,109,17,5,180,199,0,0,3,0,0,0,746,0,746,45,743,240,49,49,164,76,88,0,0,0,200,3,0,30000,30000,30000,30000,0,0,0,30,30000,30000,164,333,190,0,0,3,3,1,180,5,5,85,52,0,33,126,180,0,0,2,2,1,180,120,60,0,0,0,0]
+  ],
+  "interpretation": [
+    "First run reason4phase1: pivotC165after240samples, no exit or continuation. The partial-pivot symptom still occurred while using the correctly hash-verified patched executable.",
+    "Latest run reason17phase5: pivotC746in199samples, exit164 with criterion satisfied, THEN85continuation intervals(52both+33right), sampledA126/C180, entry and final0/0. Intentional first-track segment endpoint, not line-loss stop.",
+    "No ignored messages after latest frame; stderr empty."
+  ],
+  "limitations": [
+    "The patch addresses the reproduced runner-loop defect but has NOT eliminated all partial-pivot behavior. Remaining cause is unproven; do not attribute it automatically to geometry, frame scheduling, pauses or user placement.",
+    "One complete109run does not prove full corner repeatability, exact heading, track containment or two-lap navigation.",
+    "Sampled motor increments do not directly measure physical distance or guarantee an aligned straight exit.",
+    "The simulator was reopened after the compile workflow; exact numerical configuration/pose equivalence across all runs is not measured.",
+    "No source, powers, geometry, sensor settings or safety limits changed during review; no identical repeat run requested."
+  ]
+}

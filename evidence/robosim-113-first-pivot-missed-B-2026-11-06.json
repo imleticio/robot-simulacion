@@ -1,0 +1,38 @@
+{
+  "purpose": "Review observed integrated113failure before changing junction reference or motion",
+  "user_report": "Passed the second intended turn, continued along the straight, then stopped at its far bend; endpoint screenshot supplied",
+  "stdout": {
+    "bytes": 187573,
+    "sha256": "a41d2332a46992643a4a518bfbe489ea500f8195274cb18e33e65b1c2b257f01",
+    "complete113frames": 13,
+    "ignored_messages": 0,
+    "frames_are_not_execution_count": true
+  },
+  "started_attempt_frames": [
+    [37,113,0,0,0,0,0,0,0,45,100,100,196,196,0,0,0,3,0,0,30000,30000,1,0,1,0],
+    [37,113,0,1,0,0,0,0,0,198,0,0,506,519,0,0,0,3,0,0,30000,30000,1,0,1,0],
+    [37,113,0,2,0,0,4294967295,0,0,121,49,50,551,531,0,0,0,0,0,0,30000,30000,1,0,1,0],
+    [37,113,0,4,0,0,4294967295,0,0,203,0,49,0,0,745,0,0,3,203,0,15,15,1,0,1,0],
+    [37,113,0,5,0,1,4294967295,0,0,90,0,0,214,191,745,0,0,5,203,0,15,15,1,0,1,0],
+    [37,113,11,2,1,1,1,1,1200,165,49,49,713,760,745,0,0,0,203,0,15,15,1,0,1,0]
+  ],
+  "findings": {
+    "first_left_pivot_observed": "A745/C0in203samples, three stable stationary contact readings0/49,203refreshes and0power mismatches",
+    "first_exit_observed": "90samples,A214/C191,5freshboth-black confirmations,final0/0,completedTurns1",
+    "next_reference": 1200,
+    "next_leg_mean_sampled_counts_at_loss": 736.5,
+    "next_leg_stop": "reason11phase2turn1after165samples,final49/49; reference not reached so second pivot not scheduled",
+    "retained_pivot_fields": "A745/C0and203refreshes are from first pivot, not evidence of a second pivot",
+    "not_a_motor_watchdog": true
+  },
+  "limitations": [
+    "Endpoint counts do not locate B or reconstruct when it was passed",
+    "No proof from endpoint telemetry alone whether B was passed during prior exit versus following",
+    "Cannot establish geometric track end versus lateral line departure solely from49/49",
+    "No exact screenshot-to-frame timestamp match or measured pose/heading",
+    "Stage-criterion pass is not physical full-coverage/no-repeat/containment validation",
+    "Later initial rejections/unstarted marker-stage failures are not the started attempt"
+  ],
+  "changes": "None: preserved111and existing113NXC/RXE, route/Breferences and simulator settings",
+  "next": "Ask whether an existing integrated-run video shows passage through the intended second turn; do not request an unchanged repeat or isolated corner trial, and do not relabel a guessed smaller reference as measured."
+}

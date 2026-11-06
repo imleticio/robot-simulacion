@@ -1,0 +1,30 @@
+{
+  "purpose": "Review reported route cutting without mixing two available robot programs or assuming each gray event is a real corner",
+  "stdout_snapshot": {
+    "bytes": 518024,
+    "sha256": "840df6ce4950b794e5ec8d94e4d8a813cb1b2826d530228bc061efc68f38d3ff",
+    "started116sequences_observed": 3,
+    "latest_outgoing_B_follow": [37,116,0,2,2,2,1,0,0,107,49,49,529,378,0,743,0,0,209,0,15,15,1,0,1,0,4294967295],
+    "latest_turn2_pivot": [37,116,0,4,2,2,1,0,0,200,0,0,0,0,0,745,0,3,200,0,15,15,1,0,1,0,2],
+    "latest_turn3_follow": [37,116,0,2,3,3,1,0,0,178,49,49,645,935,0,745,0,0,200,0,15,15,1,0,1,0,4294967295],
+    "latest_turn3_terminal": [37,116,6,4,3,3,1,0,0,189,49,49,0,0,0,743,0,0,189,0,15,15,1,0,1,0,4294967295],
+    "interpretation": "Continuous flow executed beyond B; next gray events accepted as EDGEtriggers and pending steps credited, but trigger alone does not prove branch coverage or real corner. Full turn3pivot ended without contact,reason6."
+  },
+  "unattributed_ignored_block": {
+    "messages": 4150,
+    "types": ["ignored or", "ignored and"],
+    "first_offset": 392768,
+    "last_offset": 440400,
+    "context": "Between earlier116turn3reason6terminal and later116initial rejection; no program-load identity in these lines. Do not attribute to116orSim_Robotwithout confirmation."
+  },
+  "unfamiliar_files_preserved": {
+    "source": "Sim_Robot.nxc",
+    "rxe": "Sim_Robot.rxe",
+    "rxe_modified": "2026-11-06T11:57:05.244882",
+    "116_rxe_modified": "2026-11-06T11:55:22.748105",
+    "source_policy": "UsesIN_1/IN_2,AND/OR,70power,reverse corrections and40forward when neither black; differs from verified3/4configuration and116. Presence/mtime does not prove execution or screenshot identity.",
+    "modified_by_assistant": false
+  },
+  "next": "Ask which RXE produced supplied screenshots, then wait; no new controller/config change or run requested before identity is clarified.",
+  "limitations": "No matched screenshot/frame timestamps, center/footprint measurements, pose or physical all-branch coverage. Gray can be actual corner or lateral departure. No new117or baseline edits."
+}

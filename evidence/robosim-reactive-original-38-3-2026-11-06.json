@@ -1,0 +1,54 @@
+{
+  "purpose": "Adapt the explicitly selected same reactive file to the user's ORIGINAL pictured robot, incorporating bounded corrective-turn encoder knowledge without a scripted route",
+  "user_target": "robot_reactivo_simple.nxc, not Sim_Robot.nxc; lights3/4down and A/Cas supplied",
+  "source_before_sha256": "4421b2d92e465e4830f1f0c957ab55829c253e84b452e7d92ac87eea693c2160",
+  "source_after_sha256": "4b363cdffa3717f097120c3b07efcae9ab1c4d9c0827713cb7f15fe052b4dde2",
+  "revision": [38,3],
+  "configuration": {
+    "navigation_inputs": [3,4],
+    "sides": "3left/4right and Aphysicalright/Cleft from prior paired measurements, not inferred from screen side-bars",
+    "sensor_initialization": "SetSensorLight3/4only; no type/mode/orientation reconfiguration on1/2",
+    "other_inputs": "Keep1/2as supplied in the panel; not read for navigation",
+    "motor_assignments": "Unchanged A/C, Bunassigned",
+    "angles": "User-supplied arrangement is the reference; numeric angles are not derived from screenshot",
+    "telemetry": "IN_1,zero-basedport0,stoppedwritesonly; never overwrite active3/4. Does not change1/2sensor type."
+  },
+  "reactive_commands": {
+    "both_black": "A25/C25forward",
+    "left3_black_only": "A25forward/C7reverse, toward black on left",
+    "right4_black_only": "A7reverse/C25forward, toward black on right",
+    "white_release": "A20/C20forward with unchanged bounded debounce/rearm policy",
+    "neither_black_nor_white": "Stop; not declared a corner and no guessed turn direction"
+  },
+  "corner_ceiling": {
+    "limit": 743,
+    "measurement": "Signed sampled A-Cincrements, accumulated only in same uninterrupted one-sided correction",
+    "application": "Stopreason11before another command only if NEWcontact still requests SAMEcorrection and absolute cumulative difference>=743",
+    "release": "Both-black recovery, opposite correction or white resets/releases budget, including recovery exactly at the ceiling",
+    "not_a_target": "Short correction can stop far before743. No commanded90degree maneuver,18turnsequence,whole-leg60budget or200sample exit-test gate.",
+    "limitations": "743reuses prior stopped-track reference as a differential safety ceiling, not an exact chassis angle/heading/containment measurement. Inter-command motion and quantization omitted."
+  },
+  "telemetry": {
+    "fields": 26,
+    "previous24": "Same layout as38,2, but readings are now left3/right4",
+    "appended": ["correctionState(0none,1left,2right)", "signedCorrectionDifference"],
+    "fault_snapshot": "Actual rejecting sample retained, not overwritten by later stopped read"
+  },
+  "preservation": {
+    "111_original_hashes_match": true,
+    "Sim_Robot_source_sha256": "4d49af78674834dc5ca82955373b099c65baf38880c94c79c153c591d0147224",
+    "friend_source_modified": false,
+    "physical_setup_changed_by_assistant": false
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 239,
+    "reactive_tests": 25,
+    "new_tests": 5,
+    "boundary": "Actual full NXC source compiled as C with mocked APIs; port isolation/pairing updated, guard and early/exact-boundary recovery verified. NOT NBC or simulator geometry/coverage validation.",
+    "nbc38_3": "pending",
+    "powered_robosim38_3": "pending"
+  },
+  "scope": "Existing marker startup/rearm/contact/sign/sentinel/40flat/6000overall/400white guards retained. Return to white remains a candidate, not proof of all-black branches,no-repeat,containment or two laps.",
+  "next": "Use precisely user's supplied panel,notfriend1/2arrangement. Close stale same-file tab WITHOUTsaving,reopenfromdisk,compile/loadsuccessfulmatchingRXE,centeredbeforewhite,one supervised integrated attempt. Stop manually on departure/wrongbranch;inspect38,3port0frames. No isolatedcorner/calibration/knob-matching request."
+}

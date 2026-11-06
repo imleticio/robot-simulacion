@@ -1,0 +1,20 @@
+//37,115: ONLY first B reference370->450relative to114, plus revision.
+//114completed the second pivot atC744/745,A0then failed the unchanged exit
+// criterion twice. This is NOT evidence for increasing pivot angle/time.
+//450tests a slightly later entry POSITION; early-entry is a hypothesis, not
+// proven by one-sided contact. Keep all motor laws, pivot/exit guards and route.
+// Return B450is a separate unchanged seed, not the same physical measurement.
+// Start before white, unchanged sensors; stop manually on departure/wrong branch.
+#define ROUTE_REVISION 115
+#define ROUTE_BASELINE_APPROACH 1
+#define ROUTE_FIRST_B_REFERENCE 450
+#include "robot_route_stages.nxc"
+task main()
+{
+    RunRouteAttempt();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

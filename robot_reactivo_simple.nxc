@@ -1,0 +1,339 @@
+// Standalone reactive reference, frame38,3, for the user's ORIGINAL robot.
+// Lights3/4point DOWN;3left/4right from the prior paired-edge observations.
+// Ais right drive,Cleft. Keep the pictured1/2configuration; do not use it to steer.
+// No map, angle target or turn list. Correct TOWARD the sensor still on black.
+// STOP if neither sensor sees black/white; no unverified gray-advance mode.
+// First confirmed white starts; next rearmed white stops as a RETURN CANDIDATE.
+// Returning to white does NOT prove all branches, legal containment or two laps.
+// Numeric diagnostics use port1only while stopped; never write to active3/4.
+// No SetSensorLight/SetType on1/2: preserve their pictured non-navigation setup.
+#define REACTIVE_BLACK 25
+#define REACTIVE_WHITE 75
+#define REACTIVE_FORWARD 25
+#define REACTIVE_REVERSE 7
+#define REACTIVE_MARKER_POWER 20
+#define REACTIVE_INTERVAL 20
+#define REACTIVE_LIMIT 6000
+#define REACTIVE_WHITE_LIMIT 400
+#define REACTIVE_FLAT_LIMIT 40
+#define REACTIVE_CORRECTION_LIMIT 743
+
+int reactiveReason = 0; //1gray,2start,3watchdog,4sensor,5encoder,6sign,
+                        //7no progress,8white watchdog,10marker contact,
+                        //11persistent correction budget,100return candidate.
+int reactiveEvent = 0; //0none,1start,2return candidate; not a lap counter.
+int reactiveSamples = 0;
+int reactiveS1 = 30000;
+int reactiveS2 = 30000;
+int reactiveStarted = 0;
+int reactiveCandidate = 0;
+int reactiveArmed = 0;
+int reactiveBlackRun = 0;
+int reactiveWhiteRun = 0;
+int reactiveWhiteActive = 0;
+int reactiveWhiteAge = 0;
+int reactiveStraight = 0;
+int reactiveCorrection1 = 0;
+int reactiveCorrection2 = 0;
+int reactiveMarkerIntervals = 0;
+int reactiveFlatA = 0;
+int reactiveFlatC = 0;
+int reactiveFlat = 0;
+int reactiveCommandA = 0;
+int reactiveCommandC = 0;
+long reactiveDeltaA = 0;
+long reactiveDeltaC = 0;
+int reactiveCorrectionState = 0; //0none,1left contact,2right contact.
+long reactiveCorrectionDifference = 0;
+
+//0neither black,1left3only,2right4only,3both black,4some white,5both white.
+// This classifies contact, not heading, track footprint or a junction.
+int ReactiveRead()
+{
+    int state = 0;
+    reactiveS1 = Sensor(IN_3);
+    reactiveS2 = Sensor(IN_4);
+    if (reactiveS1 < 0) { return -1; }
+    if (reactiveS2 < 0) { return -1; }
+    if (reactiveS1 > 100) { return -1; }
+    if (reactiveS2 > 100) { return -1; }
+    if (reactiveS1 < REACTIVE_BLACK) { state = 1; }
+    if (reactiveS2 < REACTIVE_BLACK) { state = state + 2; }
+    if (reactiveS1 > REACTIVE_WHITE) { state = 4; }
+    if (reactiveS2 > REACTIVE_WHITE) { state = 4; }
+    if (reactiveS1 > REACTIVE_WHITE)
+    {
+        if (reactiveS2 > REACTIVE_WHITE) { state = 5; }
+    }
+    return state;
+}
+
+// Three non-white samples with at least one black sensor arm/rearm a passage.
+// Three both-white samples accept it. Gray/gray, mixed white or a short black
+// dip cannot rearm. This contact model also applies to the startup check.
+void ReactiveMarker(int state)
+{
+    int blackContact = 0;
+    reactiveEvent = 0;
+    if (state >= 4) { reactiveWhiteActive = 1; }
+    if (state > 0)
+    {
+        if (state < 4) { blackContact = 1; }
+    }
+    if (blackContact == 1)
+    {
+        if (reactiveBlackRun < 3) { reactiveBlackRun++; }
+        if (reactiveBlackRun >= 3)
+        {
+            reactiveArmed = 1;
+            reactiveWhiteActive = 0;
+            reactiveWhiteAge = 0;
+        }
+    }
+    else { reactiveBlackRun = 0; }
+    if (reactiveWhiteActive == 1) { reactiveWhiteAge++; }
+    if (state == 5)
+    {
+        if (reactiveWhiteRun < 3) { reactiveWhiteRun++; }
+    }
+    else { reactiveWhiteRun = 0; }
+    if (reactiveWhiteAge >= REACTIVE_WHITE_LIMIT) { reactiveReason = 8; return; }
+    if (reactiveWhiteRun < 3) { return; }
+    if (reactiveArmed == 0) { return; }
+    reactiveArmed = 0;
+    if (reactiveStarted == 0)
+    {
+        reactiveStarted = 1;
+        reactiveEvent = 1;
+    }
+    else
+    {
+        reactiveCandidate = 1;
+        reactiveEvent = 2;
+    }
+}
+
+// Commands can reset counters: baseline AFTER both commands, read BEFORE Off.
+// Signed increments diagnose direction/progress.743is a sampled DIFFERENCE
+// ceiling for one uninterrupted correction, not a demanded90degree maneuver.
+int ReactiveInterval(int state)
+{
+    long startA;
+    long startC;
+    long currentA;
+    long currentC;
+    int correcting = 0;
+    if (reactiveWhiteActive == 0)
+    {
+        if (state == 1) { correcting = 1; }
+        if (state == 2) { correcting = 1; }
+    }
+    if (correcting == 0)
+    {
+        reactiveCorrectionState = 0;
+        reactiveCorrectionDifference = 0;
+    }
+    else
+    {
+        if (reactiveCorrectionState != state)
+        {
+            reactiveCorrectionState = state;
+            reactiveCorrectionDifference = 0;
+        }
+        // Check only if the NEW reading still needs the SAME correction.
+        // Reacquired both-black or white releases the budget instead of stopping.
+        if (reactiveCorrectionDifference >= REACTIVE_CORRECTION_LIMIT)
+        {
+            reactiveReason = 11;
+            return 0;
+        }
+        if (reactiveCorrectionDifference <= -REACTIVE_CORRECTION_LIMIT)
+        {
+            reactiveReason = 11;
+            return 0;
+        }
+    }
+    reactiveCommandA = REACTIVE_FORWARD;
+    reactiveCommandC = REACTIVE_FORWARD;
+    // Left black -> left correction: rightAforward,leftCreverse. Mirror for4.
+    // This intentionally differs from the friend's1/2IDpairing.
+    if (state == 1) { reactiveCommandC = -REACTIVE_REVERSE; }
+    if (state == 2) { reactiveCommandA = -REACTIVE_REVERSE; }
+    if (reactiveWhiteActive == 1)
+    {
+        reactiveCommandA = REACTIVE_MARKER_POWER;
+        reactiveCommandC = REACTIVE_MARKER_POWER;
+    }
+    if (reactiveCommandA < 0) { OnRev(OUT_A, REACTIVE_REVERSE); }
+    else { OnFwd(OUT_A, reactiveCommandA); }
+    if (reactiveCommandC < 0) { OnRev(OUT_C, REACTIVE_REVERSE); }
+    else { OnFwd(OUT_C, reactiveCommandC); }
+    startA = MotorRotationCount(OUT_A);
+    startC = MotorRotationCount(OUT_C);
+    if (startA == 30000) { reactiveReason = 5; return 0; }
+    if (startC == 30000) { reactiveReason = 5; return 0; }
+    Wait(REACTIVE_INTERVAL);
+    reactiveSamples++;
+    if (reactiveWhiteActive == 1) { reactiveMarkerIntervals++; }
+    else
+    {
+        if (state == 1) { reactiveCorrection1++; }
+        else
+        {
+            if (state == 2) { reactiveCorrection2++; }
+            else { reactiveStraight++; }
+        }
+    }
+    currentA = MotorRotationCount(OUT_A);
+    currentC = MotorRotationCount(OUT_C);
+    if (currentA == 30000) { reactiveReason = 5; return 0; }
+    if (currentC == 30000) { reactiveReason = 5; return 0; }
+    reactiveDeltaA = currentA - startA;
+    reactiveDeltaC = currentC - startC;
+    if (reactiveCommandA > 0)
+    {
+        if (reactiveDeltaA < 0) { reactiveReason = 6; return 0; }
+    }
+    else
+    {
+        if (reactiveDeltaA > 0) { reactiveReason = 6; return 0; }
+    }
+    if (reactiveCommandC > 0)
+    {
+        if (reactiveDeltaC < 0) { reactiveReason = 6; return 0; }
+    }
+    else
+    {
+        if (reactiveDeltaC > 0) { reactiveReason = 6; return 0; }
+    }
+    if (reactiveDeltaA == 0) { reactiveFlatA++; }
+    else { reactiveFlatA = 0; }
+    if (reactiveDeltaC == 0) { reactiveFlatC++; }
+    else { reactiveFlatC = 0; }
+    reactiveFlat = reactiveFlatA;
+    if (reactiveFlatC > reactiveFlat) { reactiveFlat = reactiveFlatC; }
+    if (reactiveFlat >= REACTIVE_FLAT_LIMIT) { reactiveReason = 7; return 0; }
+    if (correcting == 1)
+    {
+        reactiveCorrectionDifference = reactiveCorrectionDifference + reactiveDeltaA - reactiveDeltaC;
+    }
+    return 1;
+}
+
+//26fields, only while stopped. Last-command fields precede braking, not live power.
+void ReactiveLog()
+{
+    SetInput(IN_1, ScaledValue, 38);
+    SetInput(IN_1, ScaledValue, 3);
+    SetInput(IN_1, ScaledValue, reactiveReason);
+    SetInput(IN_1, ScaledValue, reactiveEvent);
+    SetInput(IN_1, ScaledValue, reactiveSamples);
+    SetInput(IN_1, ScaledValue, reactiveS1);
+    SetInput(IN_1, ScaledValue, reactiveS2);
+    SetInput(IN_1, ScaledValue, reactiveStarted);
+    SetInput(IN_1, ScaledValue, reactiveCandidate);
+    SetInput(IN_1, ScaledValue, reactiveArmed);
+    SetInput(IN_1, ScaledValue, reactiveBlackRun);
+    SetInput(IN_1, ScaledValue, reactiveWhiteRun);
+    SetInput(IN_1, ScaledValue, reactiveStraight);
+    SetInput(IN_1, ScaledValue, reactiveCorrection1);
+    SetInput(IN_1, ScaledValue, reactiveCorrection2);
+    SetInput(IN_1, ScaledValue, reactiveMarkerIntervals);
+    SetInput(IN_1, ScaledValue, reactiveWhiteAge);
+    SetInput(IN_1, ScaledValue, reactiveFlat);
+    SetInput(IN_1, ScaledValue, reactiveDeltaA);
+    SetInput(IN_1, ScaledValue, reactiveDeltaC);
+    SetInput(IN_1, ScaledValue, reactiveCommandA);
+    SetInput(IN_1, ScaledValue, reactiveCommandC);
+    SetInput(IN_1, ScaledValue, REACTIVE_LIMIT);
+    SetInput(IN_1, ScaledValue, REACTIVE_WHITE_LIMIT);
+    SetInput(IN_1, ScaledValue, reactiveCorrectionState);
+    SetInput(IN_1, ScaledValue, reactiveCorrectionDifference);
+}
+
+void RunReactiveFollower()
+{
+    int sample;
+    int state;
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+    for (sample = 0; sample < 3; sample++)
+    {
+        state = ReactiveRead();
+        if (state < 0) { reactiveReason = 4; break; }
+        if (state == 0) { reactiveReason = 2; break; }
+        if (state >= 4) { reactiveReason = 2; break; }
+        Wait(REACTIVE_INTERVAL);
+    }
+    if (reactiveReason == 0)
+    {
+        reactiveBlackRun = 3;
+        reactiveArmed = 1;
+    }
+    while (reactiveSamples < REACTIVE_LIMIT)
+    {
+        if (reactiveReason != 0) { break; }
+        state = ReactiveRead();
+        if (state < 0) { reactiveReason = 4; break; }
+        if (state == 0) { reactiveReason = 1; break; }
+        ReactiveMarker(state);
+        if (reactiveReason != 0) { break; }
+        if (reactiveEvent != 0)
+        {
+            Off(OUT_AC);
+            state = ReactiveRead();
+            if (state < 0)
+            {
+                reactiveReason = 4;
+                reactiveCandidate = 0;
+                if (reactiveEvent == 1) { reactiveStarted = 0; }
+                break;
+            }
+            if (state != 5)
+            {
+                reactiveReason = 10;
+                reactiveCandidate = 0;
+                if (reactiveEvent == 1) { reactiveStarted = 0; }
+                break;
+            }
+            if (reactiveEvent == 2) { reactiveReason = 100; }
+            ReactiveLog();
+            PlayTone(440, 300);
+            Wait(300);
+            if (reactiveReason == 100) { break; }
+        }
+        if (ReactiveInterval(state) == 0) { break; }
+    }
+    Off(OUT_AC);
+    // Preserve the actual failing sensor snapshot. A new read after braking
+    // could change49/49into49/0and hide which contact caused startup rejection.
+    if (reactiveReason == 0)
+    {
+        state = ReactiveRead();
+        reactiveReason = 3;
+        if (state < 0) { reactiveReason = 4; }
+        if (state == 0) { reactiveReason = 1; }
+    }
+    if (reactiveReason == 100)
+    {
+        state = ReactiveRead();
+        if (state < 0) { reactiveReason = 4; reactiveCandidate = 0; }
+        else
+        {
+            if (state != 5) { reactiveReason = 10; reactiveCandidate = 0; }
+        }
+    }
+    ReactiveLog();
+}
+
+task main()
+{
+    RunReactiveFollower();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

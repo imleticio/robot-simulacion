@@ -1,0 +1,44 @@
+{
+  "purpose": "Static sensor observability evidence, not a runtime diagnosis or an authorized configuration change",
+  "executable": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/legosimulator.exe",
+  "sha256": "2729698c762c1850ae1abe903dc6d519418e5647b90fb5300bd7b1b2629684a4",
+  "symbols": {
+    "UIKnob::mouseDown": "0x41dbf0",
+    "UIKnob::mouseDragged": "0x41dc80",
+    "UIKnob::mouseUp": "0x41dd30",
+    "Robot::Robot": "0x411060",
+    "Robot::setSensorAngle": "0x411d60",
+    "Robot::updatePhysics": "0x411320"
+  },
+  "constants": {
+    "sensor_mount_radius": {"address": "0x424b44", "float32": 1.149999976158142},
+    "sensor_mount_height": {"address": "0x424b40", "float32": 0.20000000298023224},
+    "default_port3_angle_degrees": {"address": "0x424be4", "float32": 5.0},
+    "default_port4_angle_degrees": {"address": "0x4271bc", "float32": -5.0}
+  },
+  "instruction_evidence": {
+    "constructor_sets_port3_angle": ["0x41122f", "0x411244", "0x41124f"],
+    "constructor_sets_port4_angle": ["0x411254", "0x411269", "0x411275"],
+    "mount_translation_values": ["0x411e3a", "0x411e44"],
+    "mount_transform_composition": "0x411e58 calls matrix multiply at 0x405720",
+    "light_sensor_type_branch": "0x411625 compares sensor type with 1",
+    "ray_hit_required": ["0x411708", "0x41170f"],
+    "hit_coordinates_to_integer_indices": ["0x411766", "0x41176f", "0x411778", "0x411797"],
+    "cell_array_read": ["0x4117a0", "0x4117b3", "0x4117b8", "0x4117bc"]
+  },
+  "ideal_horizontal_mount_model": {
+    "forward": "radius*cos(angle)",
+    "lateral_magnitude": "radius*sin(abs(angle))",
+    "symmetric_sensor_separation": "2*radius*sin(abs(angle))",
+    "default_5_degree_separation_approximately": 0.200458204,
+    "hypothetical_20_degree_separation_approximately": 0.786646313
+  },
+  "limitations": [
+    "Constructor defaults are NOT verified current runtime sensor angles; the GUI can change them.",
+    "Ideal transform interpretation requires live configuration and scene geometry to predict actual sensor cells.",
+    "Integer cell lookup explains discrete readings, not the cause of the observed corner departure.",
+    "Changing sensor spread also changes forward offset and invalidates assumptions about the current entry geometry.",
+    "No sensor angle, scene, RXE or motion command was changed by this inspection.",
+    "Do not infer a required angle from this model alone or claim a corrected corner."
+  ]
+}

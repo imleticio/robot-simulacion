@@ -1,0 +1,28 @@
+// Probe only: check whether RoboSim logs writes to an unused input field.
+// Port 1 must remain unused. Ports 3/4 are read, never overwritten.
+// Success requires finding the sentinel values 0x25 and 0x52 in stdout.txt.
+// A completion tone does NOT prove that numeric logging works.
+task main()
+{
+    unsigned int reading3;
+    unsigned int reading4;
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1000);
+
+    reading3 = Sensor(IN_3);
+    reading4 = Sensor(IN_4);
+
+    // This package's older NBC defines ScaledValue as field 4.
+    // ScaledValueField belongs to a newer API and is not defined here.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 82);
+    SetInput(IN_1, ScaledValue, reading3);
+    SetInput(IN_1, ScaledValue, reading4);
+
+    PlayTone(880, 300);
+    Wait(700);
+    Off(OUT_AC);
+}

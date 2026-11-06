@@ -1,0 +1,11 @@
+// Silent bounded observation, revision 37,103, same 39-field telemetry.
+// After two valid 50-step exits with the widened sensor configuration,
+// observe up to 100 exit intervals at unchanged slow-exit powers.
+// This is NOT full-corner, equal-distance, containment or route validation.
+// White or neither-black still stops immediately at the next sensor sample.
+// No second turn, search, reverse, automatic restart or sound.
+#define CORNER_REVISION 103
+#define EXIT_STEPS 100
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#include "robot_prueba_codo.nxc"

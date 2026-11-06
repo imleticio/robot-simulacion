@@ -1,0 +1,27 @@
+{
+  "purpose": "Correct a nominal pivot watchdog budget; not attribution of every observed partial pivot",
+  "source_evidence": "evidence/robosim-scheduler-audit-2026-11-06.json static_evidence.motor_speed and encoder_integration",
+  "assumptions": "Ordinary inspected motor mode, power15 gives150counts/s, ideal20ms physical increments; no other motor limit, scheduling loss or reset.",
+  "target_counts": 743,
+  "model_counts_per_second": 150,
+  "control_interval_ms": 20,
+  "model_required_seconds": 4.953333333333333,
+  "model_counts_per_interval": 3,
+  "model_minimum_intervals": 248,
+  "legacy_watchdog_intervals": 240,
+  "legacy_nominal_seconds": 4.8,
+  "legacy_model_counts_at_cap": 720,
+  "new_program_revision": [37,110],
+  "new_watchdog_intervals": 375,
+  "new_nominal_seconds": 7.5,
+  "new_no_observed_progress_limit": 40,
+  "interpretation": "The old sample budget is shorter than the ideal motor model requires. Give about1.5x minimum samples as a bounded watchdog, retain encoder target743, and separately stop after40consecutive unchanged active-encoder samples or any backwards jump. Do not wait for the cap after reaching the target.",
+  "limitations": [
+    "Wait/sample counts do not measure elapsed wall or physics time; real cadence may differ.",
+    "This arithmetic does not explain C165after240samples, which is much slower than the ordinary ideal model.",
+    "Repeated encoder samples can reflect scheduling/pauses/limits, not a proven mechanical stall.",
+    "The additional watchdog margin changes maximum permitted wait, not the pivot angle, geometry or motor power.",
+    "The scheduler patch, exact outgoing alignment, containment and two-lap route are not validated by this calculation.",
+    "New110NBCcompilation/runtime remains pending; historical wrappers keep their240sample default."
+  ]
+}

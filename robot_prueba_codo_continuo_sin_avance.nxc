@@ -1,0 +1,20 @@
+// Silent local corner/continuation diagnostic, revision37,109, 68-field frame.
+// Run in the separately patched legosimulator-yield.exe with current sensors.
+// Preserve108geometry (NO pre-pivot advance), powers, pivot and exit criterion.
+// Enable ONLY the existing bounded continuation after reason16/finalboth-black.
+// Continuation: first track180sampled counts, difference+/-60,120interval cap.
+// These are conservative experimental bounds, not exact distance or heading.
+// No second turn, route/junction decision, marker counting, reverse or sounds.
+// Reason17 is the programmed segment endpoint with final both-black, NOT a lap.
+// Earlier stage failures remain stopped and cannot enter continuation.
+#define CORNER_REVISION 109
+#define POSITION_COUNT_TARGET 0
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#define ENABLE_CONTINUATION 1
+#include "robot_prueba_codo.nxc"

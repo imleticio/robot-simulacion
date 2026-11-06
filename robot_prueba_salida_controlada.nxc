@@ -1,0 +1,21 @@
+// Silent exit progress/contact diagnostic, revision 37,105, 50-field frame.
+// Preserve approach, positioning, pivot, powers and sensor configuration.
+// Require BOTH sampled motor totals >=180, THEN five consecutive both-black
+// samples, and both-black again after braking. Reason16 means this bounded
+// criterion passed, NOT exact alignment, track containment or route success.
+// A lone moving track, persistent one-sided contact, or zero progress cannot
+// pass. Reason15 means the criterion was not established within the watchdog.
+// 180 is an experimental motor-count reference, NOT body degrees/distance.
+// 200 intervals is only a safety watchdog, never the completion criterion.
+// The larger watchdog permits observing whether correction actually returns
+// to both-black beyond the old100 cutoff; sampled readings may affect timing.
+// White/loss/encoder fault stops remain; no second turn, search or sound.
+#define CORNER_REVISION 105
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#include "robot_prueba_codo.nxc"

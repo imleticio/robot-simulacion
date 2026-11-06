@@ -1,0 +1,47 @@
+{
+  "purpose": "Review integrated failure video and select one explicitly provisional earlier B reference without changing the first pivot/controller",
+  "video": {
+    "path": "/Users/leonel/Desktop/Grabación de pantalla 2026-11-06 a las 11.18.08 a. m..mov",
+    "sha256": "57ca0ec3226a97b6d5379ccd7ff939aca40a6740eef74c3178b902daf9d05e39",
+    "duration_seconds": 24.538333,
+    "width": 2184,
+    "height": 1284,
+    "fps": "60/1",
+    "review": "2fps full-clip contact sheet,1fps detail starting14s,full-resolution16.5s/18.5s frames",
+    "observed": "First bend followed by straight-through passage at intended B branch area, then stop facing gray at far bend. No visibly commanded second right turn before that stop.",
+    "limitations": "Changing camera/perspective and elevated robot/sensor housings prevent direct pixel-to-ground/encoder calibration. No exact video-to-log execution pairing, surveyed axle location, B count or containment proof."
+  },
+  "runtime_snapshot": {
+    "bytes": 249022,
+    "sha256": "53ea3891ea7925b6a63a215f32472ece1587488fca0193b0680456fe7b8ac220",
+    "distinct_second_leg_stops": [
+      {"reason":11,"samples":165,"A":713,"C":760,"mean":736.5},
+      {"reason":11,"samples":172,"A":742,"C":778,"mean":760.0},
+      {"reason":11,"samples":178,"A":690,"C":731,"mean":710.5},
+      {"reason":11,"samples":163,"A":709,"C":753,"mean":731.0}
+    ],
+    "interpretation": "All in113phase2turn1,completed1,reference1200. Controller stopped on line loss before scheduling second pivot. Duplicated stage/final frames excluded from this distinct-value list; starting poses were not surveyed/matched.",
+    "ignored_messages": 0
+  },
+  "change": {
+    "entry_point": "robot_vuelta_integrada_cruce.nxc",
+    "revision": [37,114],
+    "first_B_reference_before": 1200,
+    "first_B_reference_after": 370,
+    "selection": "Next earlier candidate at approximately half the observed available following leg; NOT a measured B coordinate from video or timestamps, and may still be early/late.",
+    "origin": "Mean sampled motor totals reset after preceding controlled exit",
+    "unchanged": "All shared113control code, approach20/10/25,marker budgets,first leg400/later2000,pivot743/375/40/15/RESET_NONE,exit12/9/200/180/5,returnB450,turn order,sensor settings",
+    "fallback_on_early_loss": "None; retain stop rather than turning at wrong far edge",
+    "frame_fields": 26,
+    "baseline111_preserved": true
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 198,
+    "new_tests": 5,
+    "boundary": "Actual NXC helpers compiled as C with mocked IO plus existing audits. Earlier mock reference reached and full mocked sequence do NOT validate actual junction location, geometry or route coverage.",
+    "nbc114": "pending",
+    "robosim114": "pending"
+  },
+  "next": "Compile/load new114entry in already-openBricxCC, before-white start, unchanged sensors, once supervised. Stop on wrong branch or departure and inspect26field114frames. No unchanged113rerun or isolated-turn trial requested."
+}

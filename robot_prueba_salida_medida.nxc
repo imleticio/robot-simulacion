@@ -1,0 +1,14 @@
+// Silent sampled exit-encoder diagnostic, revision 37,104, 47-field frame.
+// Same motion decisions, powers and 100-interval cap as revision 37,103.
+// Added encoder reads may affect runtime timing; this is not a motion replay.
+// Each interval takes fresh baselines AFTER motor commands, and reads counts
+// BEFORE the next command/stop can reset them. Sum only nonnegative deltas.
+// Do not interpret totals as exact path distance, body yaw, or safe alignment.
+// Measurement faults stop; zero progress is reported, not treated as success.
+// No automatic second turn, search, reverse, sounds or extended duration.
+#define CORNER_REVISION 104
+#define EXIT_STEPS 100
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#include "robot_prueba_codo.nxc"

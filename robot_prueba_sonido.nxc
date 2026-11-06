@@ -1,0 +1,15 @@
+// Standalone sound compatibility test. No driving commands.
+task main()
+{
+    Off(OUT_AC);
+    Wait(1500);
+
+    PlayTone(440, 300);
+    Wait(700);
+    PlayTone(880, 300);
+    Wait(700);
+    PlayTone(1320, 600);
+    Wait(1200);
+
+    Off(OUT_AC);
+}

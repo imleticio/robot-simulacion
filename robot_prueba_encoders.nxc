@@ -1,0 +1,52 @@
+// Silent, supervised encoder capability test; NOT corner navigation.
+// Place on a clear black straight with room for a short forward pulse.
+// C left drive, A right drive. Both move forward at low power for 200 ms.
+// Readings are collected before/within the pulse and logged AFTER stopping.
+// API recognition by NBC does not imply RoboSim implements the reads.
+// No sounds, reverse, automatic repetition, display, or boolean AND/OR.
+task main()
+{
+    long beforeA = 30000;
+    long beforeC = 30000;
+    long startA = 30000;
+    long startC = 30000;
+    long middleA = 30000;
+    long middleC = 30000;
+    long endA = 30000;
+    long endC = 30000;
+
+    Off(OUT_AC);
+    Wait(1500);
+    beforeA = MotorRotationCount(OUT_A);
+    beforeC = MotorRotationCount(OUT_C);
+    OnFwd(OUT_AC, 15);
+    startA = MotorRotationCount(OUT_A);
+    startC = MotorRotationCount(OUT_C);
+    Wait(100);
+    middleA = MotorRotationCount(OUT_A);
+    middleC = MotorRotationCount(OUT_C);
+    Wait(100);
+    endA = MotorRotationCount(OUT_A);
+    endC = MotorRotationCount(OUT_C);
+    Off(OUT_AC);
+
+    // Ten-value frame: 37,88,beforeA,beforeC,startA,startC,
+    // middleA,middleC,endA,endC. 30000 is an initialization sentinel,
+    // NOT a valid encoder result. Inspect fresh runtime ignored opcodes too.
+    // Port 1 must be unused. Bridge is 16-bit; not general long-value logging.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 88);
+    SetInput(IN_1, ScaledValue, beforeA);
+    SetInput(IN_1, ScaledValue, beforeC);
+    SetInput(IN_1, ScaledValue, startA);
+    SetInput(IN_1, ScaledValue, startC);
+    SetInput(IN_1, ScaledValue, middleA);
+    SetInput(IN_1, ScaledValue, middleC);
+    SetInput(IN_1, ScaledValue, endA);
+    SetInput(IN_1, ScaledValue, endC);
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

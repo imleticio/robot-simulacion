@@ -1,0 +1,111 @@
+// Silent, supervised motor-count/yaw calibration, NOT corner navigation.
+// Start aligned with a clear straight reference, away from a junction.
+// C forward / A reverse is the observed robot-right rotation direction.
+// Stop when EITHER motor reaches 360 relative rotation counts, or on a
+// direction/read fault, or at the strict sample limit. No retry or exit.
+// MOTOR counts are NOT chassis degrees: 360 is an exploratory motor target.
+// Previous 180-count run stopped at 182, still short of a chassis quarter turn.
+// Sensor contact is not an orientation reference; no line follower runs here.
+// Supervise and stop manually on departure. This test is not rule validation.
+#define MOTOR_COUNT_TARGET 360
+#define NEGATIVE_MOTOR_COUNT_TARGET -360
+#define TURN_POWER 15
+#define SAMPLE_INTERVAL_MS 20
+// Previous 180-count target took 48 samples. This separate watchdog allows
+// the next encoder target without using elapsed time as the success rule.
+#define MAX_SAMPLES 120
+
+task main()
+{
+    long startA = 30000;
+    long startC = 30000;
+    long currentA = 30000;
+    long currentC = 30000;
+    long deltaA = 0;
+    long deltaC = 0;
+    int sample;
+    int samples = 0;
+    // 1 C reached target, 2 A reached target, 3 unexpected direction,
+    // 4 sample limit (NOT calibrated success), 5 unassigned-read sentinel.
+    int stopReason = 4;
+
+    Off(OUT_AC);
+    Wait(1500);
+    // Issue commands ONCE so sampling does not repeatedly reset counters.
+    OnFwd(OUT_C, TURN_POWER);
+    OnRev(OUT_A, TURN_POWER);
+    startA = MotorRotationCount(OUT_A);
+    startC = MotorRotationCount(OUT_C);
+    if (startA == 30000)
+    {
+        stopReason = 5;
+    }
+    if (startC == 30000)
+    {
+        stopReason = 5;
+    }
+    if (stopReason == 4)
+    {
+        for (sample = 0; sample < MAX_SAMPLES; sample++)
+        {
+            Wait(SAMPLE_INTERVAL_MS);
+            currentA = MotorRotationCount(OUT_A);
+            currentC = MotorRotationCount(OUT_C);
+            samples++;
+            if (currentA == 30000)
+            {
+                stopReason = 5;
+                break;
+            }
+            if (currentC == 30000)
+            {
+                stopReason = 5;
+                break;
+            }
+            deltaA = currentA - startA;
+            deltaC = currentC - startC;
+            if (deltaA > 0)
+            {
+                stopReason = 3;
+                break;
+            }
+            if (deltaC < 0)
+            {
+                stopReason = 3;
+                break;
+            }
+            if (deltaC >= MOTOR_COUNT_TARGET)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (deltaA <= NEGATIVE_MOTOR_COUNT_TARGET)
+            {
+                stopReason = 2;
+                break;
+            }
+        }
+    }
+    Off(OUT_AC);
+    // 12-field frame: 37,92,reason,samples,startA,startC,currentA,currentC,
+    // deltaA,deltaC,motorTarget,sampleLimit. All reads precede motor stop.
+    // Port 1 must be unused. Decode negative hex as signed values.
+    // A target stop only validates motor progress, NOT a 90-degree heading.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 92);
+    SetInput(IN_1, ScaledValue, stopReason);
+    SetInput(IN_1, ScaledValue, samples);
+    SetInput(IN_1, ScaledValue, startA);
+    SetInput(IN_1, ScaledValue, startC);
+    SetInput(IN_1, ScaledValue, currentA);
+    SetInput(IN_1, ScaledValue, currentC);
+    SetInput(IN_1, ScaledValue, deltaA);
+    SetInput(IN_1, ScaledValue, deltaC);
+    SetInput(IN_1, ScaledValue, MOTOR_COUNT_TARGET);
+    SetInput(IN_1, ScaledValue, MAX_SAMPLES);
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

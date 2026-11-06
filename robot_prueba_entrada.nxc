@@ -1,0 +1,136 @@
+// Silent corner-entry diagnostic. No pivot or route decision.
+// Same approach control as robot_prueba_linea.nxc.
+// Start on the same straight, both sensor footprints on black.
+// Sensor 3 robot-left, 4 robot-right; C left drive, A right drive.
+// Stop on white, neither sensor black, or the approach limit.
+// Supervise: stopping on sensor loss does not guarantee track containment.
+#define BLACK_THRESHOLD 25
+#define WHITE_THRESHOLD 75
+#define TEST_STEPS 400
+#define CONTROL_INTERVAL_MS 20
+
+task main()
+{
+    unsigned int leftReading = 0;
+    unsigned int rightReading = 0;
+    int step;
+    int samples = 0;
+    int stopReason = 3; // 1 white, 2 neither black, 3 step limit.
+    // States: 0 neither black, 1 left only, 2 right only, 3 both, 4 white.
+    // Four most recent runs; state 9 / length 0 means no history.
+    int state = 9;
+    int currentState = 9;
+    int currentLength = 0;
+    int previousState1 = 9;
+    int previousLength1 = 0;
+    int previousState2 = 9;
+    int previousLength2 = 0;
+    int previousState3 = 9;
+    int previousLength3 = 0;
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+    for (step = 0; step < TEST_STEPS; step++)
+    {
+        leftReading = Sensor(IN_3);
+        rightReading = Sensor(IN_4);
+        samples++;
+        state = 0;
+        if (leftReading < BLACK_THRESHOLD)
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                state = 3;
+            }
+            else
+            {
+                state = 1;
+            }
+        }
+        else
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                state = 2;
+            }
+        }
+        if (leftReading > WHITE_THRESHOLD)
+        {
+            state = 4;
+        }
+        if (rightReading > WHITE_THRESHOLD)
+        {
+            state = 4;
+        }
+        if (state == currentState)
+        {
+            currentLength++;
+        }
+        else
+        {
+            previousState3 = previousState2;
+            previousLength3 = previousLength2;
+            previousState2 = previousState1;
+            previousLength2 = previousLength1;
+            previousState1 = currentState;
+            previousLength1 = currentLength;
+            currentState = state;
+            currentLength = 1;
+        }
+        if (state == 4)
+        {
+            stopReason = 1;
+            break;
+        }
+        if (state == 0)
+        {
+            stopReason = 2;
+            break;
+        }
+        if (state == 3)
+        {
+            OnFwd(OUT_AC, 20);
+        }
+        else
+        {
+            if (state == 1)
+            {
+                OnFwd(OUT_C, 10);
+                OnFwd(OUT_A, 25);
+            }
+            else
+            {
+                OnFwd(OUT_C, 25);
+                OnFwd(OUT_A, 10);
+            }
+        }
+        Wait(CONTROL_INTERVAL_MS);
+    }
+    Off(OUT_AC);
+    // 15-field frame, emitted only after stopping: 37,86,reason,step,
+    // left,right,samples, then four state/length pairs oldest to newest.
+    // Lengths count samples, not measured time. Step is zero-based.
+    // Unused port 1 is reserved for the verified simulator log bridge.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 86);
+    SetInput(IN_1, ScaledValue, stopReason);
+    SetInput(IN_1, ScaledValue, step);
+    SetInput(IN_1, ScaledValue, leftReading);
+    SetInput(IN_1, ScaledValue, rightReading);
+    SetInput(IN_1, ScaledValue, samples);
+    SetInput(IN_1, ScaledValue, previousState3);
+    SetInput(IN_1, ScaledValue, previousLength3);
+    SetInput(IN_1, ScaledValue, previousState2);
+    SetInput(IN_1, ScaledValue, previousLength2);
+    SetInput(IN_1, ScaledValue, previousState1);
+    SetInput(IN_1, ScaledValue, previousLength1);
+    SetInput(IN_1, ScaledValue, currentState);
+    SetInput(IN_1, ScaledValue, currentLength);
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

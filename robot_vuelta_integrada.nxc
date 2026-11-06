@@ -1,0 +1,15 @@
+//37,112: supervised first full-route ATTEMPT from BEFORE the white marker.
+// Orient eastward across white toward the bottom-right bend in the red photo.
+// This is NOT the old isolated-corner starting position. Preserve sensor settings.
+// Read VUELTA_INTEGRADA.md: two branch references and left/upper-loop geometry
+// are provisional. Stop manually on departure. This does NOT implement two laps.
+#include "robot_route_stages.nxc"
+task main()
+{
+    RunRouteAttempt();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

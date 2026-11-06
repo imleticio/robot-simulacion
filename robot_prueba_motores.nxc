@@ -1,0 +1,18 @@
+// Bench diagnostic only, not a competition run.
+// Place the robot on clear floor, away from walls and track boundaries.
+// Test one port per run; change TEST_PORT to OUT_C after identifying A.
+// Observe which track moves and the direction of the robot's front.
+#define TEST_PORT OUT_AC
+#define TEST_POWER 20
+#define TEST_DURATION_MS 250
+
+task main()
+{
+    Off(OUT_AC);
+    Wait(2000);
+    OnFwd(TEST_PORT, TEST_POWER);
+    Wait(TEST_DURATION_MS);
+    Off(OUT_AC);
+    PlayTone(880, 300);
+    Wait(1000);
+}

@@ -1,0 +1,19 @@
+//37,113: integrated route with111's20/10/25approach restored.
+//112stopped BEFORE the first pivot: its short-continuation60count difference
+// guard was incorrectly applied to the whole leg and pre-white approach. Keep
+// it only AFTER entering white, with a separate difference baseline. Marker
+// crossing/exit remain12/9. Keep encoder/sensor/40flat/watchdog guards.
+// First bend leg cap400as111; pivot/exit/route/Bseeds unchanged. No cap increase.
+// Start before white, same red route and sensor settings; supervise departure.
+#define ROUTE_REVISION 113
+#define ROUTE_BASELINE_APPROACH 1
+#include "robot_route_stages.nxc"
+task main()
+{
+    RunRouteAttempt();
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

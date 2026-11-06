@@ -1,0 +1,92 @@
+#define SENSOR_LEFT  IN_1   // Sensor de luz izquierdo (Puerto 1)
+#define SENSOR_RIGHT IN_2   // Sensor de luz derecho (Puerto 2)
+
+#define BLACK_THRESHOLD 40  // Por debajo de 40 = Línea negra
+#define WHITE_THRESHOLD 85  // Por encima de 85 = Mosaico blanco
+
+task main()
+{
+    SetSensorLight(SENSOR_LEFT);
+    SetSensorLight(SENSOR_RIGHT);
+
+    int lap_count = 0;
+
+    // Ejecuta hasta completar 3 pasadas por el blanco (Inicio, Fin V1, Fin V2)
+    while (lap_count < 3)
+    {
+        int left_val = Sensor(SENSOR_LEFT);
+        int right_val = Sensor(SENSOR_RIGHT);
+
+        // -------------------------------------------------------------
+        // 1. DETECCIÓN DEL MOSAICO BLANCO (SALIDA / VUELTAS / LLEGADA)
+        // -------------------------------------------------------------
+        if (left_val >= WHITE_THRESHOLD || right_val >= WHITE_THRESHOLD)
+        {
+            lap_count++;
+
+            if (lap_count == 1)
+            {
+                // Tono de PARTIDA (Inicio de Vuelta 1)
+                PlayTone(880, 300);
+            }
+            else if (lap_count == 2)
+            {
+                // Tono al completar Vuelta 1 e iniciar Vuelta 2
+                PlayTone(600, 200);
+            }
+            else if (lap_count == 3)
+            {
+                // Tono de LLEGADA (Fin de Vuelta 2)
+                PlayTone(1046, 600);
+                break; // Detiene la simulación
+            }
+
+            // Avance forzado constante para cruzar la baldosa blanca
+            OnFwd(OUT_A, 60);
+            OnFwd(OUT_C, 60);
+            Wait(800);
+        }
+        // -------------------------------------------------------------
+        // 2. SEGUIDOR DE LÍNEA NEGRA Y GIROS DE 90 GRADOS
+        // -------------------------------------------------------------
+        else if (left_val < BLACK_THRESHOLD && right_val < BLACK_THRESHOLD)
+        {
+            // Ambos sobre la cinta negra: avanzar recto a buena velocidad
+            OnFwd(OUT_A, 70);
+            OnFwd(OUT_C, 70);
+        }
+        else if (left_val < BLACK_THRESHOLD && right_val >= BLACK_THRESHOLD)
+        {
+            // El sensor derecho salió al gris -> giro cerrado a la izquierda
+            OnFwd(OUT_C, 70);
+            OnRev(OUT_A, 20); // Retrocede levemente el motor izquierdo para girar cerrado
+        }
+        else if (right_val < BLACK_THRESHOLD && left_val >= BLACK_THRESHOLD)
+        {
+            // El sensor izquierdo salió al gris -> giro cerrado a la derecha
+            OnFwd(OUT_A, 70);
+            OnRev(OUT_C, 20); // Retrocede levemente el motor derecho para girar cerrado
+        }
+        else
+        {
+            // Pérdida temporal de pista (ambos en gris): búsqueda suave hacia adelante
+            OnFwd(OUT_A, 40);
+            OnFwd(OUT_C, 40);
+        }
+
+        Wait(20);
+    }
+
+    // -------------------------------------------------------------
+    // 3. DETENCIÓN Y SILENCIO FINAL
+    // -------------------------------------------------------------
+    Off(OUT_A);
+    Off(OUT_C);
+
+    while (true)
+    {
+        Off(OUT_A);
+        Off(OUT_C);
+        Wait(100);
+    }
+}

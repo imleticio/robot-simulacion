@@ -1,0 +1,19 @@
+// Silent combined corner/exit experiment, revision37,108, 50-field frame.
+// Preserve105controlled exit, powers, pivot, guards and progress/contact gate.
+// The ONLY motion-geometry change relative to105 is no pre-pivot advance.
+// Unlike107, enable the existing bounded exit after stable pivot contact.
+// Reason16 means BOTH sampled exit totals>=180, then5freshboth-black samples,
+// and both-black after braking; NOT exact heading, legal corner or lap success.
+// Reason15 means200intervalwatchdog/inconclusive, not a completed corner.
+// A partial pivot or missing contact must NEVER enter the exit.
+// No continuation, second turn, reverse, search or sounds.
+#define CORNER_REVISION 108
+#define POSITION_COUNT_TARGET 0
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#include "robot_prueba_codo.nxc"

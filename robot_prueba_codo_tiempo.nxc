@@ -1,0 +1,24 @@
+// University practical: bounded corner timing/progress diagnostic37,110.
+// Preserve109geometry, powers, exit and local continuation on yield.exe.
+// Inspected ordinary motor model: power15 ->150counts/s. C743needs~4.953s;
+// 240*20ms=4.8s nominal is insufficient at ideal20ms physics updates.
+// Use375samplewatchdog (~7.5s NOMINAL, not measured elapsed time), about1.5x
+// ceil(743/3)=248minimum model samples. Still stop pivot atC743, not atcap.
+// Stopreason21 if C fails to increase for40consecutive samples; reject a
+// backwards jump as reason7. Actual pauses/scheduling can also trigger these
+// guards, so this is not a mechanical-stall diagnosis or a yaw guarantee.
+// No new motion commands, sensor changes, secondturn, search or sounds.
+// 72fieldframe=109's68fields+progressSamples,flatSamples,longestFlat,flatLimit.
+#define CORNER_REVISION 110
+#define POSITION_COUNT_TARGET 0
+#define TURN_SAMPLE_LIMIT 375
+#define TURN_PROGRESS_GUARD 1
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#define ENABLE_CONTINUATION 1
+#include "robot_prueba_codo.nxc"

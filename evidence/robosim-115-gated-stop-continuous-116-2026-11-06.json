@@ -1,0 +1,44 @@
+{
+  "purpose": "Replace repeated diagnostic exit-test handoff with continuous route following after repeated115intentional halts",
+  "user_priority": "Wants one actual traversal covering every black branch, accepts another route order, rejects endless isolated turn/reference trials; no explicit waiver of official no-repeat/containment requirements inferred",
+  "runtime_snapshot": {
+    "bytes": 373788,
+    "sha256": "9e6143ff51109975f9365a95f891898f81f3069956599f1c6a29ac5f58f7112f",
+    "complete115frames": 18,
+    "ignored_messages": 0,
+    "B_exit1": [37,115,15,5,1,1,1,1,450,200,0,0,345,270,0,744,0,3,197,0,15,15,1,0,1,0],
+    "B_terminal1": [37,115,15,5,1,1,1,1,450,200,49,0,345,270,0,744,0,3,197,0,15,15,1,0,1,0],
+    "B_exit2": [37,115,15,5,1,1,1,1,450,200,0,0,353,233,0,745,0,2,196,0,15,15,1,0,1,0],
+    "B_terminal2": [37,115,15,5,1,1,1,1,450,200,49,0,353,233,0,745,0,2,196,0,15,15,1,0,1,0],
+    "interpretation": "Second pivots reach commanded encoder target. Both exit totals exceed180but stable3/2below5. Reason15routes to explicit Off/Wait terminal loop. Position change370to450did not remove this blocking condition; not evidence of a physical motor stall or lost command."
+  },
+  "design_change": {
+    "entry_point": "robot_vuelta_integrada_continua.nxc",
+    "revision": [37,116],
+    "feature_flag": "ROUTE_CONTINUOUS_FLOW=1; default0retains prior policy",
+    "first_exit": "Retained unchanged as the origin of firstB450reference",
+    "later_pivots": "Same pivot target743/power15/375samples/40flat/RESET_NONE and stationary contact; hand off directly to ongoing11120/10/25line follower instead of separate200interval exit-test gate",
+    "pending_progress": "Turns1..17remain pending until outgoing following reaches next configured trigger; final pending leg credited only after expected white confirmation. A pivot alone cannot mark step complete or skip an ordered pending leg.",
+    "reference_origin_caveat": "FirstB450retains first-exit origin. ReturnB450nowstarts after turn6pivot/contact, not old separate exit6; same number is not same physical origin or a calibrated reference. Needs observation if reached.",
+    "unchanged": "Candidate full-branch route, firstB450andreturnB450, first-exit200/180/5, marker budgets, sensor/encoder/white/40flat/400firstleg/2000laterleg guards, simulator settings and111baseline",
+    "not_a_timeout_extension": true,
+    "frame_fields": 27,
+    "appended_field": "pendingTurn (-1none)"
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 214,
+    "new_tests": 11,
+    "boundary": "Actual116entry header/helpers compiled as C with mocked APIs plus existing audits. Hypothetical outgoing trace proceeds230intervals to next trigger without a200gate; fault stops and deferred progress verified. NOT simulated geometry/alignment or physical all-branch coverage.",
+    "nbc116": "pending",
+    "robosim116": "pending"
+  },
+  "limitations": [
+    "Continuous following may still fail to align or leave a branch; full lap not observed",
+    "Existing edge trigger can confuse a planned corner with lateral departure after forward progress",
+    "Trigger-based pending progress is not proof of physical branch identity, no-repeat or containment",
+    "First exit can still stop on its real criterion; real faults are not ignored to force motion",
+    "References and upper shared-region route remain provisional; two laps not implemented"
+  ],
+  "next": "Compile/load NEW116entry in already-openBricxCC, same before-white departure/sensors, one supervised integrated attempt. Stop manually on wrong branch/departure and inspect27field116frames. No unchanged115run or isolated-corner trial requested."
+}

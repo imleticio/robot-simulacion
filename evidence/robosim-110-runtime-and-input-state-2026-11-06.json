@@ -1,0 +1,36 @@
+{
+  "program_revision": [37,110],
+  "observed_process": "legosimulator-yield.exe PID72609",
+  "log_bytes": 21772,
+  "complete_frames": [
+    [37,110,21,1,25,40,49,0,0,0,0,0,0,0,0,0,743,375,49,49,0,0,0,0,0,0,200,0,0,30000,30000,30000,30000,0,0,0,30,30000,30000,0,0,0,30000,30000,30000,30000,0,180,5,0,0,0,0,0,0,0,30000,30000,30000,30000,0,180,120,60,30000,30000,30000,30000,0,40,40,40],
+    [37,110,17,5,194,197,0,0,3,0,0,0,745,0,745,41,743,375,49,49,146,72,74,0,0,0,200,3,0,30000,30000,30000,30000,0,0,0,30,30000,30000,146,323,190,0,0,2,2,1,180,5,5,81,51,0,30,131,182,0,0,0,3,1,180,120,60,0,0,0,0,197,0,0,40]
+  ],
+  "runtime_interpretation": [
+    "First run reason21phase1: all40pivot samples reported zero C progress;0progressSamples,40flatSamples,longestFlat40. No exit or continuation. The expanded hard watchdog was not the stop condition.",
+    "Latest run reason17phase5: C745in197pivot samples,197progress samples and zero flat samples. Exit146criterionpass; continuation81intervals51both+30right,sampledA131/C182,entry/final0/0. Intentional bounded segment endpoint.",
+    "No ignored messages after latest frame."
+  ],
+  "read_only_followup": {
+    "normal_pause": {
+      "Controller::togglePause": "0x403ca0 writes runner+0x34 and calls setIsPaused",
+      "runner_entry": "0x40a41e..0x40a422 returns without VM steps when runner+0x34 is true",
+      "conclusion": "The ordinary pause path does not support the simple hypothesis that it keeps consuming NXC samples while physics alone is paused."
+    },
+    "lifted_input_state": {
+      "Single::setIsLifted": "0x41ae20..0x41ae32 writes robot+0x294",
+      "Robot::updatePhysics": "0x411398..0x4113ab branches on robot+0x294. Lifted branch0x411536..0x41154b calls rotate; normal encoder integration0x4113b1..0x411429 is bypassed.",
+      "input_begin": "Controller::mouseDown0x403fcb..0x403fff can call manipulation handler0x412ce0; handler0x412d04..0x412d0e dispatches setIsLifted(true)",
+      "input_end": "Controller::mouseUp0x404263..0x40426d dispatches release handler0x412e10;0x412e58..0x412e62 dispatches setIsLifted(false)",
+      "conclusion": "There is a specific input-state mechanism that can suppress normal encoder progress without proving wrong motor targets. This is static evidence, not an observed cause of the recorded40zero samples."
+    }
+  },
+  "limitations": [
+    "No runtime lifted flag, pause flag, motor power trace, exact pose or input history was captured in these frames.",
+    "Do not claim the user held/dragged the robot, that a missing mouse-up occurred, or that lifted mode caused this run.",
+    "Do not attribute all prior C165/C193/C683 failures to one mechanism.",
+    "The larger sample budget remains a model-based correction; latest successful run needed197samples and does not itself demonstrate a benefit from raising240to375.",
+    "No additional binary patch, source/power/angle/sensor changes or repeat trial requested by this review.",
+    "One110continuation pass is not full corner repeatability, exact alignment, containment or two-lap route validation."
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "purpose": "Read-only static evidence for a provisional stopped-track quarter-turn reference; not runtime corner validation",
+  "executable": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/legosimulator.exe",
+  "sha256": "2729698c762c1850ae1abe903dc6d519418e5647b90fb5300bd7b1b2629684a4",
+  "symbol_source": "Bundled legosimulator.pdb CodeView procedure record",
+  "procedure": {
+    "name": "Robot::updatePhysics",
+    "virtual_address": "0x411320",
+    "code_length": "0x67e"
+  },
+  "constants": {
+    "motor_distance_factor": {
+      "virtual_address": "0x427210",
+      "storage": "little-endian float64",
+      "value": 0.4000000059604645
+    },
+    "count_angle_factor": {
+      "virtual_address": "0x427308",
+      "storage": "little-endian float64",
+      "value": 0.008726646192371845
+    },
+    "drive_spacing": {
+      "virtual_address": "0x427300",
+      "storage": "little-endian float64",
+      "value": 1.649999976158142
+    }
+  },
+  "instruction_evidence": {
+    "motor_increment_scaled": ["0x4113ea", "0x4113f9", "0x41142c", "0x411432"],
+    "sum_half_for_translation": "0x411449",
+    "difference_divided_by_drive_spacing": ["0x411452", "0x411454"],
+    "atan_call": "0x411460",
+    "atan_thunk": "0x42252a",
+    "atan_import": "MSVCR100.dll!_CIatan at IAT 0x424198",
+    "heading_accumulation": "0x41146b",
+    "heading_wrap_import": "MSVCR100.dll!_CIfmod at IAT 0x42419c"
+  },
+  "derivation": {
+    "distance_per_count": "motor_distance_factor * count_angle_factor",
+    "per_physics_step_yaw": "atan((left_distance - right_distance) / drive_spacing), with sign depending on configured drive assignments",
+    "stopped_track_small_step_quarter_turn_counts": "(pi/2) * drive_spacing / distance_per_count",
+    "small_step_quarter_turn_counts": 742.4999839587292,
+    "chosen_integer_motor_target": 743,
+    "small_step_yaw_at_old_720_target_degrees": 87.27272915820267,
+    "example_4_count_step_yaw_at_743_degrees": 90.05846218297155
+  },
+  "limitations": [
+    "Derivation assumes normal unsynchronized physics and the observed drive assignments",
+    "Actual atan integration depends on per-frame increments, float rounding, stopping overshoot, and counter quantization",
+    "Scene units are not established as physical centimetres",
+    "Correct yaw does not establish corner position, sensor footprint, track containment, exit identity, or route legality",
+    "No runtime compilation, execution, or live process memory access was performed during this review"
+  ]
+}

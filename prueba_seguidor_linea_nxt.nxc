@@ -1,0 +1,51 @@
+// PROTOTIPO DE PRUEBA - LEGO NXT / RoboSim
+// No es todavía la solución del concurso.
+// Sensores de luz: puertos 3 (izquierda) y 4 (derecha).
+// Motores: A (izquierda) y C (derecha).
+// Ajustar UMBRAL tras probar negro y blanco en RoboSim.
+
+#define UMBRAL 40
+#define VEL_BASE 30
+#define VEL_LENTA 15
+#define VEL_RAPIDA 40
+
+task main()
+{
+    int izquierda;
+    int derecha;
+
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    PlayTone(880, 200); // pitido al arrancar la prueba
+    Wait(300);
+
+    while (true)
+    {
+        izquierda = Sensor(IN_3);
+        derecha   = Sensor(IN_4);
+
+        // Ambos sensores sobre negro: avanzar.
+        if ((izquierda < UMBRAL) && (derecha < UMBRAL))
+        {
+            OnFwd(OUT_AC, VEL_BASE);
+        }
+        // Sensor izquierdo sobre negro: corregir hacia la izquierda.
+        else if (izquierda < UMBRAL)
+        {
+            OnFwd(OUT_A, VEL_LENTA);
+            OnFwd(OUT_C, VEL_RAPIDA);
+        }
+        // Sensor derecho sobre negro: corregir hacia la derecha.
+        else if (derecha < UMBRAL)
+        {
+            OnFwd(OUT_A, VEL_RAPIDA);
+            OnFwd(OUT_C, VEL_LENTA);
+        }
+        // Ambos sensores sobre blanco: detener (condición ambigua).
+        else
+        {
+            Off(OUT_AC);
+        }
+        Wait(30);
+    }
+}

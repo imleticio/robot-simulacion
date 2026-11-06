@@ -1,0 +1,21 @@
+{
+  "executable": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/legosimulator-yield.exe",
+  "observed_process": "PID64680 legosimulator-yield.exe",
+  "launch_method": "Existing Simulador LEOG NXT.app Wineskin Advanced > Tools > Command Line; cd /d to the simulator directory through Z: and run the alternate EXE. Original wrapper startup path was not changed.",
+  "configuration_evidence": "User supplied paired close-ups identified as new and prior panels. Needles3/4 and A/C side assignments visually agree. Exact numerical angles and initial pose equivalence are NOT verified; no knob adjustment was requested.",
+  "program_revision": [37,108],
+  "log_path": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/stdout.txt",
+  "log_bytes": 3963,
+  "complete_frames": [
+    [37,108,16,3,212,192,0,0,3,0,0,0,746,0,746,39,743,240,49,49,152,78,74,0,0,0,200,3,0,30000,30000,30000,30000,0,0,0,30,30000,30000,152,317,191,0,0,2,2,1,180,5,5]
+  ],
+  "interpretation": "One observed user-side run of the patched executable: pivotA0/C746 in192samples, stationary both-black3, exit152intervals(78both,74left), sampledA317/C191, freshboth-black5 and final0/0, reason16before200watchdog. No ignored messages in the reviewed log.",
+  "limitations": [
+    "One criterion pass does not prove repeatability, removal of historical C193/C683 behavior, or end-to-end scheduler correctness under all loads.",
+    "The original executable also had successful runs; no performance benefit can be attributed from this single unmatched run.",
+    "The exit still included74one-sided correction intervals; this is not proof of corrected entry geometry or exact outgoing alignment.",
+    "Reason16 is the programmed diagnostic endpoint, not route completion, legal corner traversal or two laps.",
+    "Shared stdout was recreated on launch; prior execution history is separately archived by the scheduler audit.",
+    "No NXC/RXE, sensor angles, motor powers or safety limits changed during this runtime review."
+  ]
+}

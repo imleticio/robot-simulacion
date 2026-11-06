@@ -1,0 +1,14 @@
+// Silent isolated geometry experiment, revision37,107, 39-field frame.
+// Same original approach, A-braked/C743pivot, power15, cap240 and stationary
+// contact check. Change ONLY the pre-pivot positioning from60counts to NONE.
+// Stop after the pivot/check; no exit, continuation, reverse, search or sound.
+// Compare end-of-pivot CONTACT/POSE to107's observation-only predecessor101,
+// NOT distance travelled against the multi-stage106program.
+// Reason14: stable contact observation stop, NOT alignment/corner success.
+// Reason6: pivot reference reached but contact not confirmed; remain stopped.
+// Position samples/totals stay0, raw positioning readings stay30000 (unused),
+// positionTarget is0. This is NOT a motor or sensor recalibration.
+#define CORNER_REVISION 107
+#define POSITION_COUNT_TARGET 0
+#define CORNER_STOP_AFTER_CONFIRMATION 1
+#include "robot_prueba_codo.nxc"

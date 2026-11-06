@@ -1,0 +1,40 @@
+{
+  "purpose": "Preserve encoder reference while actively maintaining pivot command; not proof a prior command was lost",
+  "program_revision": [37,111],
+  "documentation": "https://bricxcc.sourceforge.net/nbc/nxcdoc/nxcapi/group___output_module_functions.html",
+  "bundled_compiler_evidence": {
+    "RESET_NONE": "0x00",
+    "RESET_BLOCKANDTACHO": "0x28",
+    "Power_field": 2,
+    "OnFwd": "OnFwdEx(_ports,_pwr,RESET_BLOCKANDTACHO)",
+    "OnFwdEx": "setout Power,OutputMode,RegMode,RunState,TachoLimit0,UpdateFlags(UF_UPDATE_TACHO_LIMIT+UF_UPDATE_MODE+UF_UPDATE_SPEED+_reset)",
+    "base_update_flags": "0x07; reset bits0x08/0x20/0x40 are absent with RESET_NONE"
+  },
+  "simulator_static_evidence": {
+    "System::setOutputConfiguration": "0x41c700..0x41c7f1",
+    "update_flags_dispatch": "0x41c715..0x41c75f: bits03commitMotorChanges,04commitTurnTargetChanges,08resetAllCounters,20resetBlockCounter,40resetRotationCounter",
+    "power_write": "field2 at0x41c767..0x41c77f dispatches signed motor-power write",
+    "NetworkInterface::setMotorPower": "0x410cd2..0x410cde writes motor power, not rotation counters",
+    "NetworkInterface::setMotorTurnTarget": "0x410bf1..0x410bfd sets limit/reset target-relative count, not program rotation counter at+0x10",
+    "NetworkInterface::resetAllCounters": "0x410aa8..0x410ac3 clears block/program/target-relative counters",
+    "System::getOutputConfiguration": "field2 reads motor power at0x41c825..0x41c853; field14reads program rotation counter at0x41c9d5..0x41ca05"
+  },
+  "verification": {
+    "actual_x86_dispatch_with_stub_backend": {
+      "flags07": [7,8],
+      "legacy_flags2f": [7,8,9,10],
+      "flags47": [7,8,11],
+      "meaning": "Slots7/8commit;9/10/11reset all/block/rotation. Actual dispatcher does not call reset slots for flags07. Backend effects and physics are not executed by this test."
+    },
+    "full_host_audit_suite_passed": 156,
+    "test_file": "tests/test_codo_command_refresh.py"
+  },
+  "change": "Before each pivot Wait, read C commanded power, reassert the SAME Cforward15 via OnFwdExRESET_NONE, read it back and abort22if not15. Retain original post-start encoder baselines, target743,375sample hard watchdog and40flat guard. Add refresh/mismatch/before/after telemetry after72fields.",
+  "limitations": [
+    "No evidence yet proves that the prior40zero-progress run had power0 or a lost command; this is a bounded control hypothesis and added discrimination.",
+    "A valid power15 readback is only commanded state, not actual motion or proof that lifted/physics/scheduler state is correct.",
+    "Refresh cannot fix frozen physics; reason21 remains and must not be bypassed.",
+    "NBC compilation and full RXE execution in RoboSim of111 are pending, including MotorPower readback and RESET_NONE behavior under the real VM payload.",
+    "No target, geometry, powers, sensor configuration, continuation limits, simulator EXE or route decisions were changed."
+  ]
+}

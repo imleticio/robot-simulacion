@@ -1,0 +1,33 @@
+{
+  "video": "/Users/leonel/Desktop/Grabación de pantalla 2026-11-06 a las 2.03.37 a. m..mov",
+  "sha256": "3a8db7463c80dd6dbda258c3b5acbf01b8cf5c6890159e09249f087c34c5c0e3",
+  "duration_seconds": 10.623333,
+  "resolution": [2184, 1284],
+  "nominal_frame_rate": "60/1",
+  "review": {
+    "method": "2fps contact sheet, larger selected-frame detail sheet, full-resolution final frame extracted at10.4s",
+    "observations": [
+      "The robot approaches the bend, performs a rightward arc, and changes position during a short outgoing motion before becoming stationary.",
+      "The sequence supports actual short translation after the turn, not just a completely stationary chassis or an uninterrupted in-place spin.",
+      "It does not demonstrate a long straight exit or arrival at another corner.",
+      "The final robot is near the outgoing black strip; rendered sensor housings do not establish exact light-ray contact positions or whole-body containment."
+    ]
+  },
+  "live_log": {
+    "path": "/Users/leonel/Downloads/BricxCC Simulator/legosimulator/stdout.txt",
+    "bytes_at_review": 40901,
+    "new_complete_frames_since_previous_review": [
+      [37,103,10,3,159,195,0,49,3,0,0,0,745,0,745,38,743,240,49,49,100,49,51,0,0,0,100,3,16,0,0,64,64,64,64,60,30,49,49],
+      [37,103,10,3,139,192,0,49,3,0,0,0,745,0,745,35,743,240,49,49,100,52,48,0,0,0,100,3,16,0,0,62,62,62,62,60,30,49,49]
+    ],
+    "interpretation": "Both newly appended runs reached100exit intervals with finalleftblack/rightgray and reason10programmedcap. Latest has52both-black and48left-only intervals. No ignored messages after latest frame."
+  },
+  "limitations": [
+    "No timestamp-based exact video/frame pairing to one of the two newly appended runs is established.",
+    "All newly appended frames have the same cap stop, so log evidence is consistent with an intentional final stop, not a newly observed line-loss stop.",
+    "No metric distance, exact yaw, sensor footprint, full containment or legal route validation was extracted from perspective images.",
+    "Aggregate state counts do not establish the order of correction intervals or recovery to both-black.",
+    "Existing TURN encoder snapshots do not measure outgoing travel.",
+    "No source, RXE, sensor settings, powers or limits changed during this review."
+  ]
+}

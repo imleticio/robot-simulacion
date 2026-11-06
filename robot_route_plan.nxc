@@ -1,0 +1,68 @@
+// Candidate route transcribed from the user's red photograph, NOT a surveyed map.
+// A turn index describes ordered commanded progress, not verified branch coverage.
+#ifndef ROBOT_ROUTE_PLAN_NXC
+#define ROBOT_ROUTE_PLAN_NXC
+#define ROUTE_TURNS 18
+#define ROUTE_LEFT -1
+#define ROUTE_RIGHT 1
+#define ROUTE_EDGE 0
+#define ROUTE_REFERENCE 1
+// PROVISIONAL sampled motor references from the photographs. Not measured distances.
+//112..115references begin AFTER the preceding controlled exit, not a junction
+// center.116preserves first B origin; return B begins after turn6pivot/contact
+// because later exits are no longer separate stages. That450seed needs runtime fit.
+#ifndef ROUTE_FIRST_B_REFERENCE
+#define ROUTE_FIRST_B_REFERENCE 1200
+#endif
+#ifndef ROUTE_RETURN_B_REFERENCE
+#define ROUTE_RETURN_B_REFERENCE 450
+#endif
+int routeDirection = 0;
+int routeTrigger = ROUTE_EDGE;
+long routeReference = 0;
+
+int ConfigureRouteTurn(int index)
+{
+    routeDirection = 0;
+    routeTrigger = ROUTE_EDGE;
+    routeReference = 0;
+    if (index == 0) { routeDirection = ROUTE_LEFT; } // Bottom-right bend.
+    if (index == 1) // B: northbound approach -> east toward C.
+    {
+        routeDirection = ROUTE_RIGHT;
+        routeTrigger = ROUTE_REFERENCE;
+        routeReference = ROUTE_FIRST_B_REFERENCE;
+    }
+    // Pass C eastbound; traverse the large right loop clockwise in this view.
+    if (index == 2) { routeDirection = ROUTE_RIGHT; }
+    if (index == 3) { routeDirection = ROUTE_RIGHT; }
+    if (index == 4) { routeDirection = ROUTE_RIGHT; }
+    // Pass C northbound, then follow the raised rectangular B-C detour.
+    if (index == 5) { routeDirection = ROUTE_LEFT; }
+    if (index == 6) { routeDirection = ROUTE_LEFT; }
+    if (index == 7) // B: southbound approach -> inner-left branch.
+    {
+        routeDirection = ROUTE_RIGHT;
+        routeTrigger = ROUTE_REFERENCE;
+        routeReference = ROUTE_RETURN_B_REFERENCE;
+    }
+    if (index == 8) { routeDirection = ROUTE_RIGHT; } // Inner-left bottom bend.
+    if (index == 9) { routeDirection = ROUTE_RIGHT; } // Inner-left upper bend.
+    if (index == 10) { routeDirection = ROUTE_RIGHT; } // Lower upper-loop entry.
+    if (index == 11) { routeDirection = ROUTE_LEFT; }
+    if (index == 12) { routeDirection = ROUTE_LEFT; }
+    if (index == 13) { routeDirection = ROUTE_RIGHT; }
+    if (index == 14) { routeDirection = ROUTE_LEFT; }
+    if (index == 15) { routeDirection = ROUTE_LEFT; }
+    // The tiny stagger at the upper shared region is NOT an extra blind pivot.
+    // Ordinary following must stay in contact; failure stops, never skips a turn.
+    if (index == 16) { routeDirection = ROUTE_LEFT; } // Outer top-left bend.
+    if (index == 17) { routeDirection = ROUTE_LEFT; } // Outer bottom-left -> white.
+    if (routeDirection == 0) { return 0; }
+    if (routeTrigger == ROUTE_REFERENCE)
+    {
+        if (routeReference <= 0) { return 0; }
+    }
+    return 1;
+}
+#endif

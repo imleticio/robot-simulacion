@@ -1,0 +1,17 @@
+// Silent local continuation diagnostic, revision37,106, 68-field frame.
+// Preserve105approach/pivot/exit; enable phase5 ONLY after its reason16.
+// Add a short separately measured follower segment, then stop again.
+// First track reaching180sampled counts stops; sampled track difference60
+// or120intervalwatchdog also stops. These are provisional bounds, not exact
+// physical distance, heading, containment or permission to cross junctions.
+// White/loss/encoderfault guards remain. No automatic second turn or sounds.
+#define CORNER_REVISION 106
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#define ENABLE_CONTINUATION 1
+#include "robot_prueba_codo.nxc"

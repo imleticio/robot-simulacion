@@ -1,0 +1,47 @@
+{
+  "purpose": "Distinguish completed second pivot from failed controlled exit, and test a later entry position without changing pivot/exit policy",
+  "user_observation": "Turns and then becomes diagonal; three endpoint/trajectory screenshots supplied without matched phase timestamps",
+  "stdout": {
+    "bytes": 302002,
+    "sha256": "7d84f47a82fd3c3b40cc2fd9d104a1d023d6f1ac6bed98b1e8c6eade2f37eaa2",
+    "complete114frames": 18,
+    "started_attempts_in_snapshot": 2,
+    "ignored_messages": 0
+  },
+  "second_turn_attempts": [
+    {
+      "follow": [37,114,0,2,1,1,1,1,370,86,0,0,361,379,745,0,0,0,219,0,15,15,1,0,1,0],
+      "pivot_contact": [37,114,0,4,1,1,1,1,370,213,0,49,0,0,0,744,0,3,213,0,15,15,1,0,1,0],
+      "exit": [37,114,15,5,1,1,1,1,370,200,49,0,340,169,0,744,0,0,213,0,15,15,1,0,1,0]
+    },
+    {
+      "follow": [37,114,0,2,1,1,1,1,370,87,0,0,352,393,745,0,0,0,210,0,15,15,1,0,1,0],
+      "pivot_contact": [37,114,0,4,1,1,1,1,370,210,0,49,0,0,0,745,0,3,210,0,15,15,1,0,1,0],
+      "exit": [37,114,15,5,1,1,1,1,370,200,0,0,371,202,0,745,0,1,210,0,15,15,1,0,1,0],
+      "terminal": [37,114,15,5,1,1,1,1,370,200,49,0,371,202,0,745,0,1,210,0,15,15,1,0,1,0]
+    }
+  ],
+  "interpretation": {
+    "pivot": "Both right pivots reached the743encoder reference with A0, C744/745, no power mismatch. Not an observed incomplete pivot or power-readback failure.",
+    "exit": "Reason15at200intervals. First weaker trackC169below180; second both totalsabove180but only1freshboth-black reading, not5. Terminal49/0. completedTurns remains1, so second stage was not declared successful.",
+    "diagonal": "One-sided contact and excess sampled Aadvance are compatible with leftward corrective tendency during exit; they do not reconstruct exact yaw or isolate a positional root cause.",
+    "limits": "Sensor contact cannot prove outgoing branch identity, heading or containment. No matched screenshot/phase timestamps or measured initial poses. Early versus late entry remains a hypothesis."
+  },
+  "change": {
+    "entry_point": "robot_vuelta_integrada_cruce_tardio.nxc",
+    "revision": [37,115],
+    "first_B_reference": {"before":370,"after":450},
+    "hypothesis": "Starting80additional mean sampled counts farther along incoming strip may improve pivot placement; not proof370was early and not a calibrated junction coordinate",
+    "unchanged": "Shared controller, all motor laws, pivot743/power15/375/40/RESET_NONE,exit12/9/200/180/5,marker budgets,first/other leg caps,turn order,returnB450,sensors,simulator and111baseline",
+    "frame_fields": 26
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 203,
+    "new_tests": 5,
+    "boundary": "Actual115entry header/NXC helpers compiled as C with mocked APIs, plus existing audits; no RoboSim or physical alignment proof",
+    "nbc115": "pending",
+    "robosim115": "pending"
+  },
+  "next": "Compile new115entry in already-openBricxCC and run one supervised integrated attempt beforewhite with unchanged sensors. Stop manually on wrong branch/departure; inspect26field115frames. Do not increase pivot/exit budgets or request an isolated corner trial."
+}

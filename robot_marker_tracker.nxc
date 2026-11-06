@@ -1,0 +1,140 @@
+// Reusable marker state machine. No motor, sensor, sound or display calls.
+// The caller supplies readings sampled at its bounded control interval.
+// This module does NOT recognize a route or prove a completed lap by itself.
+#ifndef ROBOT_MARKER_TRACKER_NXC
+#define ROBOT_MARKER_TRACKER_NXC
+
+#define MARKER_BLACK_THRESHOLD 25
+#define MARKER_WHITE_THRESHOLD 75
+#define MARKER_CONFIRM_SAMPLES 3
+#define MARKER_EVENT_NONE 0
+#define MARKER_EVENT_START 1
+#define MARKER_EVENT_LAP 2
+#define MARKER_EVENT_FINISH 3
+#define MARKER_EVENT_REJECTED 4
+#define MARKER_EVENT_INVALID 5
+
+int markerCrossings = 0; // Accepted crossings: start, lap 1, lap 2.
+int markerLapCount = 0;
+int markerFinished = 0;
+int markerEvent = MARKER_EVENT_NONE;
+int markerRejectedCrossings = 0;
+int markerArmed = 0;
+int markerWhiteSamples = 0;
+int markerBlackSamples = 0;
+
+void ResetMarkerTracker()
+{
+    markerCrossings = 0;
+    markerLapCount = 0;
+    markerFinished = 0;
+    markerEvent = MARKER_EVENT_NONE;
+    markerRejectedCrossings = 0;
+    markerArmed = 0;
+    markerWhiteSamples = 0;
+    markerBlackSamples = 0;
+}
+
+// routeComplete must come from a separately validated route controller.
+// Pass 1 only after all required segments for the CURRENT lap are verified.
+// Clear/advance that route state on START/LAP/FINISH events. Never pass a
+// constant 1 to turn a white crossing into an unverified completed lap.
+void UpdateMarkerTracker(int leftReading, int rightReading, int routeComplete)
+{
+    int bothWhite = 0;
+    int bothBlack = 0;
+    int readingsValid = 1;
+    markerEvent = MARKER_EVENT_NONE;
+    if (markerFinished == 1)
+    {
+        return;
+    }
+    if (leftReading < 0) { readingsValid = 0; }
+    if (rightReading < 0) { readingsValid = 0; }
+    if (leftReading > 100) { readingsValid = 0; }
+    if (rightReading > 100) { readingsValid = 0; }
+    if (readingsValid == 0)
+    {
+        markerEvent = MARKER_EVENT_INVALID;
+        markerArmed = 0;
+        markerWhiteSamples = 0;
+        markerBlackSamples = 0;
+        return;
+    }
+    if (leftReading > MARKER_WHITE_THRESHOLD)
+    {
+        if (rightReading > MARKER_WHITE_THRESHOLD)
+        {
+            bothWhite = 1;
+        }
+    }
+    if (leftReading < MARKER_BLACK_THRESHOLD)
+    {
+        if (rightReading < MARKER_BLACK_THRESHOLD)
+        {
+            bothBlack = 1;
+        }
+    }
+    if (bothBlack == 1)
+    {
+        if (markerBlackSamples < MARKER_CONFIRM_SAMPLES)
+        {
+            markerBlackSamples++;
+        }
+        if (markerBlackSamples >= MARKER_CONFIRM_SAMPLES)
+        {
+            markerArmed = 1;
+        }
+    }
+    else
+    {
+        markerBlackSamples = 0;
+    }
+    if (bothWhite == 0)
+    {
+        markerWhiteSamples = 0;
+        return;
+    }
+    if (markerWhiteSamples < MARKER_CONFIRM_SAMPLES)
+    {
+        markerWhiteSamples++;
+    }
+    if (markerWhiteSamples < MARKER_CONFIRM_SAMPLES)
+    {
+        return;
+    }
+    if (markerArmed == 0)
+    {
+        return;
+    }
+    // Consume the crossing even when rejected. A route flag changing while
+    // parked over white must not retroactively turn it into a valid lap.
+    markerArmed = 0;
+    if (markerCrossings == 0)
+    {
+        markerCrossings = 1;
+        markerEvent = MARKER_EVENT_START;
+        return;
+    }
+    if (routeComplete != 1)
+    {
+        if (markerRejectedCrossings < 32767)
+        {
+            markerRejectedCrossings++;
+        }
+        markerEvent = MARKER_EVENT_REJECTED;
+        return;
+    }
+    markerCrossings++;
+    markerLapCount++;
+    if (markerLapCount == 2)
+    {
+        markerFinished = 1;
+        markerEvent = MARKER_EVENT_FINISH;
+    }
+    else
+    {
+        markerEvent = MARKER_EVENT_LAP;
+    }
+}
+#endif

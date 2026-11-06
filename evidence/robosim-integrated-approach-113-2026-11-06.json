@@ -1,0 +1,51 @@
+{
+  "purpose": "Fix a demonstrated112premature approach stop, not a diagnosed pivot or geometry failure",
+  "user_observation": "Robot remained at the first curve in the integrated attempt; screenshot supplied",
+  "runtime_snapshots": {
+    "first_read_bytes": 143582,
+    "first_read_complete112frames": 11,
+    "marker_start_frame": [37,112,0,0,0,0,0,0,0,72,100,100,101,101,0,0,0,3,0,0,30000,30000,1,0],
+    "marker_release_frame": [37,112,0,1,0,0,0,0,0,207,0,0,482,482,0,0,0,3,0,0,30000,30000,1,0],
+    "first_leg_stop_frame": [37,112,19,2,0,0,4294967295,0,0,243,0,50,528,466,0,0,0,0,0,0,30000,30000,1,0],
+    "direction_signed": -1,
+    "meaning": "Start confirmed and white released; turn0approach stopped on A-C=62at reason19. Completed0turns, no pivot commands/refreshes observed. A screenshot-to-frame timestamp match was not established.",
+    "later_read_bytes": 157295,
+    "later_read_sha256": "df995a18e9e40d9dd240a3fea6dd60778cbba1d9276f1bf1f579197431aea6f8",
+    "later_complete112frames": 18,
+    "additional_unstarted_marker_stops": [
+      [37,112,19,0,0,0,0,0,0,188,0,50,457,397,0,0,0,0,0,0,30000,30000,0,0],
+      [37,112,19,0,0,0,0,0,0,166,0,50,383,322,0,0,0,0,0,0,30000,30000,0,0],
+      [37,112,19,0,0,0,0,0,0,134,0,50,365,304,0,0,0,0,0,0,30000,30000,0,0]
+    ],
+    "ignored_messages_in_inspected_log": 0,
+    "limitations": "No per-sample contact history or matched initial poses; phase0started0means white was not confirmed, not proof neither sensor ever touched white. Do not infer exact yaw, timing, user error or pivot failure. Duplicate stage/final frames are not separate robot executions."
+  },
+  "root_cause": "112applied the short diagnostic's cumulative60-count difference stop to an entire correcting approach and unstarted marker approach. That directly explains the observed reason19termination, not all causes of the one-sided pose.",
+  "change": {
+    "entry_point": "robot_vuelta_integrada_aproximacion.nxc",
+    "revision": [37,113],
+    "feature_flag": "ROUTE_BASELINE_APPROACH=1; default0retains112policy",
+    "approach": "11120/20both black, C10/A25left-only, C25/A10right-only before bends and before white contact",
+    "difference_guard": "Removed only from full approach. White contact latches crossing and a separate signed A-C baseline; crossing/release retain12/9and60relative budget.",
+    "first_leg_cap": 400,
+    "later_leg_cap": 2000,
+    "unchanged": "Pivot743,power15,375samples,40flat,RESET_NONE; exit12/9,200samples,180both+5fresh contact; route sequence; B references1200/450; no reverse/search/retry",
+    "113_frame_fields": 26,
+    "appended_fields": ["markerEntered", "markerDifferenceBase"]
+  },
+  "preservation": {
+    "111_baseline_hashes_match_prior_evidence": true,
+    "112_rxe_preserved_sha256": "9cf4952065e4755bd2ea2c60329514761ab9c5b87de59baa5038a85833ab939d",
+    "112_entry_point_preserved": true,
+    "simulator_sensor_settings_changed": false
+  },
+  "verification": {
+    "command": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-audit-venv/bin/python -B -m unittest discover -s tests -p 'test_*.py'",
+    "passed": 193,
+    "new_tests": 12,
+    "boundary": "Actual NXC helpers compiled as C with mocked APIs plus existing audits. Hypothetical regression patterns are not replays of the unrecorded243sample history. Preprocessing confirms pivot/exit/route configuration unchanged by feature flag.",
+    "113_nbc_compilation": "pending",
+    "113_robosim_execution": "pending"
+  },
+  "next": "Compile NEW113entry in already-open BricxCC, load only its successful matchingRXE, run integrated once from before white with unchanged sensors; stop manually on wrong branch/departure and inspect fresh26field113frames. No more unchanged112or isolated corner trials."
+}

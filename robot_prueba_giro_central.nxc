@@ -1,0 +1,179 @@
+// Supervised center-turn experiment, NOT a competition route.
+// Start on the same straight, BOTH light sensors on black.
+// Sensor 3 robot-left, 4 robot-right; C left drive, A right drive.
+// On loss at both sensors: C forward, A reverse (explicitly authorized).
+// Center rotation is an ideal-drive hypothesis, not measured simulator motion.
+// No sound, automatic retry, forward exit, or route decision.
+// Black confirmation does NOT establish 90 degrees or track containment.
+#define BLACK_THRESHOLD 25
+#define WHITE_THRESHOLD 75
+#define APPROACH_STEPS 400
+#define TURN_STEPS 90
+#define TURN_POWER 15
+#define CONTROL_INTERVAL_MS 20
+#define CONFIRM_SAMPLES 3
+
+task main()
+{
+    unsigned int leftReading = 0;
+    unsigned int rightReading = 0;
+    int approachStep;
+    int turnStep = 0;
+    int phase = 0;
+    int stable = 0;
+    int bothNow = 0;
+    int turnSamples = 0;
+    int leftBlackSamples = 0;
+    int rightBlackSamples = 0;
+    int bothBlackSamples = 0;
+    // One-based sample positions; zero means never observed.
+    int firstLeftBlack = 0;
+    int lastLeftBlack = 0;
+    int firstRightBlack = 0;
+    int lastRightBlack = 0;
+    int stopReason = 3; // 1 white, 3 approach limit, 4 turn limit,
+                        // 5 stationary both-black confirmation only.
+
+    Off(OUT_AC);
+    SetSensorLight(IN_3);
+    SetSensorLight(IN_4);
+    Wait(1500);
+    for (approachStep = 0; approachStep < APPROACH_STEPS; approachStep++)
+    {
+        leftReading = Sensor(IN_3);
+        rightReading = Sensor(IN_4);
+        if (leftReading > WHITE_THRESHOLD)
+        {
+            stopReason = 1;
+            break;
+        }
+        if (rightReading > WHITE_THRESHOLD)
+        {
+            stopReason = 1;
+            break;
+        }
+        if (leftReading < BLACK_THRESHOLD)
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                OnFwd(OUT_AC, 20);
+            }
+            else
+            {
+                OnFwd(OUT_C, 10);
+                OnFwd(OUT_A, 25);
+            }
+        }
+        else
+        {
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                OnFwd(OUT_C, 25);
+                OnFwd(OUT_A, 10);
+            }
+            else
+            {
+                phase = 1;
+                break;
+            }
+        }
+        Wait(CONTROL_INTERVAL_MS);
+    }
+    Off(OUT_AC);
+    if (phase == 1)
+    {
+        stopReason = 4;
+        for (turnStep = 0; turnStep < TURN_STEPS; turnStep++)
+        {
+            if (stable == 0)
+            {
+                OnFwd(OUT_C, TURN_POWER);
+                OnRev(OUT_A, TURN_POWER);
+            }
+            else
+            {
+                Off(OUT_AC);
+            }
+            Wait(CONTROL_INTERVAL_MS);
+            leftReading = Sensor(IN_3);
+            rightReading = Sensor(IN_4);
+            turnSamples++;
+            if (leftReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            if (rightReading > WHITE_THRESHOLD)
+            {
+                stopReason = 1;
+                break;
+            }
+            bothNow = 0;
+            if (leftReading < BLACK_THRESHOLD)
+            {
+                leftBlackSamples++;
+                if (firstLeftBlack == 0)
+                {
+                    firstLeftBlack = turnSamples;
+                }
+                lastLeftBlack = turnSamples;
+                if (rightReading < BLACK_THRESHOLD)
+                {
+                    bothBlackSamples++;
+                    Off(OUT_AC);
+                    bothNow = 1;
+                }
+            }
+            if (rightReading < BLACK_THRESHOLD)
+            {
+                rightBlackSamples++;
+                if (firstRightBlack == 0)
+                {
+                    firstRightBlack = turnSamples;
+                }
+                lastRightBlack = turnSamples;
+            }
+            if (bothNow == 1)
+            {
+                stable++;
+            }
+            else
+            {
+                stable = 0;
+            }
+            if (stable >= CONFIRM_SAMPLES)
+            {
+                stopReason = 5;
+                break;
+            }
+        }
+    }
+    Off(OUT_AC);
+    // 18-field frame: 37,87,reason,phase,approachIndex,turnIndex,left,right,
+    // stable,turnSamples,leftBlackCount,rightBlackCount,bothBlackCount,
+    // firstLeft,lastLeft,firstRight,lastRight,configuredTurnLimit.
+    // Indices zero-based; black positions one-based. Port 1 must be unused.
+    SetInput(IN_1, ScaledValue, 37);
+    SetInput(IN_1, ScaledValue, 87);
+    SetInput(IN_1, ScaledValue, stopReason);
+    SetInput(IN_1, ScaledValue, phase);
+    SetInput(IN_1, ScaledValue, approachStep);
+    SetInput(IN_1, ScaledValue, turnStep);
+    SetInput(IN_1, ScaledValue, leftReading);
+    SetInput(IN_1, ScaledValue, rightReading);
+    SetInput(IN_1, ScaledValue, stable);
+    SetInput(IN_1, ScaledValue, turnSamples);
+    SetInput(IN_1, ScaledValue, leftBlackSamples);
+    SetInput(IN_1, ScaledValue, rightBlackSamples);
+    SetInput(IN_1, ScaledValue, bothBlackSamples);
+    SetInput(IN_1, ScaledValue, firstLeftBlack);
+    SetInput(IN_1, ScaledValue, lastLeftBlack);
+    SetInput(IN_1, ScaledValue, firstRightBlack);
+    SetInput(IN_1, ScaledValue, lastRightBlack);
+    SetInput(IN_1, ScaledValue, TURN_STEPS);
+    while (true)
+    {
+        Off(OUT_AC);
+        Wait(100);
+    }
+}

@@ -1,0 +1,37 @@
+{
+  "source": "/Users/leonel/Desktop/Grabación de pantalla 2026-11-06 a las 12.27.01\u202fa.\u202fm..mov",
+  "source_bytes": 9407342,
+  "sha256": "35b6b5ed0158307c8561d837414f7e0f18fee300d8c82692f0770403874fd650",
+  "duration_seconds": 6.601667,
+  "width": 2184,
+  "height": 1284,
+  "nominal_frame_rate": "60/1",
+  "inspection": {
+    "method": "FFmpeg contact sheet at 2 fps plus full-resolution selected frames",
+    "selected_seconds": [0.2, 4.5, 5.3, 6.2, 6.55],
+    "temporary_frames": "/private/var/folders/rh/53y9960j4n1b9f74bmhxjhvh0000gn/T/opencode/robosim-video-2026-11-06",
+    "source_modified": false
+  },
+  "visual_observations": [
+    "Clip shows a rightward forward arc followed by a short forward displacement toward screen-left",
+    "No second turn is visible; the diagnostic does not implement one",
+    "A stationary endpoint is visible; the drawn sensor housings alone do not establish actual sampled floor coordinates"
+  ],
+  "new_complete_log_frames": [
+    [37, 97, 11, 3, 78, 193, 49, 49, 3, 0, 0, 0, 743, 0, 743, 65, 743, 240, 49, 49, 23, 23, 0, 0, 0, 0, 25, 3],
+    [37, 97, 10, 3, 79, 197, 0, 0, 3, 0, 0, 0, 743, 0, 743, 51, 743, 240, 49, 49, 25, 25, 0, 0, 0, 0, 25, 3]
+  ],
+  "interpretation": [
+    "Latest complete frame stopped at the programmed 25-interval exit cap with final sensors 0/0, not on line loss",
+    "Preceding frame lost both-black contact after 23 exit intervals and ended 49/49",
+    "These different outcomes do not establish repeatability or a legal corner",
+    "The log has no per-frame timestamps; do not conclusively assign a particular run to the video solely from the filename"
+  ],
+  "next_revision": {
+    "frame_prefix": [37, 98],
+    "exit_step_limit": 50,
+    "unchanged_pivot_target": 743,
+    "purpose": "Extend the bounded observation only; retain all line-loss and white stops and no automatic second turn",
+    "compilation_and_runtime": "pending"
+  }
+}

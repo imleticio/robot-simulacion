@@ -1,0 +1,156 @@
+// Bounded local continuation, not junction recognition or route navigation.
+// Uses the same motor/sensor APIs already used by the corner diagnostic.
+#ifndef ROBOT_CONTINUATION_STAGE_NXC
+#define ROBOT_CONTINUATION_STAGE_NXC
+
+#define CONTINUE_COUNT_LIMIT 180
+#define CONTINUE_SAMPLE_LIMIT 120
+#define CONTINUE_DIFFERENCE_LIMIT 60
+
+int continueSamples = 0;
+int continueBothSamples = 0;
+int continueLeftSamples = 0;
+int continueRightSamples = 0;
+long continueTotalA = 0;
+long continueTotalC = 0;
+long continueStartA = 30000;
+long continueStartC = 30000;
+long continueCurrentA = 30000;
+long continueCurrentC = 30000;
+int continueEncoderStatus = 0;
+int continueEntryLeft = 30000;
+int continueEntryRight = 30000;
+int continueFinalLeft = 30000;
+int continueFinalRight = 30000;
+
+// Call ONCE, only after reason16 and its stopped both-black confirmation.
+// 17 sampled segment limit with final both-black, NOT another corner/lap.
+// 18 watchdog, 19 excessive sampled track difference, 20 inconclusive contact.
+// Existing reasons1/11/7/8 retain white/loss/encoder-fault meanings.
+int RunContinuationStage()
+{
+    int step;
+    int state = 0;
+    int ready = 1;
+    int reached = 0;
+    int reason = 18;
+    int finalCheck = 0;
+    int left = 0;
+    int right = 0;
+    long deltaA = 0;
+    long deltaC = 0;
+    long difference = 0;
+
+    Off(OUT_AC);
+    continueEntryLeft = Sensor(IN_3);
+    continueEntryRight = Sensor(IN_4);
+    if (continueEntryLeft >= BLACK_THRESHOLD) { ready = 0; }
+    if (continueEntryRight >= BLACK_THRESHOLD) { ready = 0; }
+    if (ready == 0) { reason = 20; }
+    if (continueEntryLeft > WHITE_THRESHOLD) { reason = 1; }
+    if (continueEntryRight > WHITE_THRESHOLD) { reason = 1; }
+
+    if (ready == 1)
+    {
+        for (step = 0; step < CONTINUE_SAMPLE_LIMIT; step++)
+        {
+            left = Sensor(IN_3);
+            right = Sensor(IN_4);
+            if (left > WHITE_THRESHOLD) { reason = 1; break; }
+            if (right > WHITE_THRESHOLD) { reason = 1; break; }
+            state = 0;
+            if (left < BLACK_THRESHOLD)
+            {
+                if (right < BLACK_THRESHOLD)
+                {
+                    state = 3;
+                    OnFwd(OUT_AC, EXIT_FORWARD_POWER);
+                }
+                else
+                {
+                    state = 1;
+                    Off(OUT_C);
+                    OnFwd(OUT_A, EXIT_CORRECTION_POWER);
+                }
+            }
+            else
+            {
+                if (right < BLACK_THRESHOLD)
+                {
+                    state = 2;
+                    Off(OUT_A);
+                    OnFwd(OUT_C, EXIT_CORRECTION_POWER);
+                }
+                else
+                {
+                    reason = 11;
+                    break;
+                }
+            }
+
+            // Fresh baselines AFTER command resets. These totals measure only
+            // sampled intervals, not lossless odometry, distance or heading.
+            continueStartA = MotorRotationCount(OUT_A);
+            continueStartC = MotorRotationCount(OUT_C);
+            continueEncoderStatus = 1;
+            if (continueStartA == 30000) { continueEncoderStatus = 2; }
+            if (continueStartC == 30000) { continueEncoderStatus = 2; }
+            if (continueEncoderStatus == 2) { reason = 8; break; }
+            Wait(CONTROL_INTERVAL_MS);
+            continueCurrentA = MotorRotationCount(OUT_A);
+            continueCurrentC = MotorRotationCount(OUT_C);
+            continueSamples++;
+            if (state == 3) { continueBothSamples++; }
+            if (state == 1) { continueLeftSamples++; }
+            if (state == 2) { continueRightSamples++; }
+            if (continueCurrentA == 30000) { continueEncoderStatus = 2; }
+            if (continueCurrentC == 30000) { continueEncoderStatus = 2; }
+            if (continueEncoderStatus == 2) { reason = 8; break; }
+            deltaA = continueCurrentA - continueStartA;
+            deltaC = continueCurrentC - continueStartC;
+            if (deltaA < 0) { continueEncoderStatus = 3; }
+            if (deltaC < 0) { continueEncoderStatus = 3; }
+            if (continueEncoderStatus == 3) { reason = 7; break; }
+            continueTotalA = continueTotalA + deltaA;
+            continueTotalC = continueTotalC + deltaC;
+
+            // Limit accumulated sampled turning tendency in EITHER direction.
+            // This is a conservative command diagnostic, not a yaw guarantee.
+            difference = continueTotalA - continueTotalC;
+            if (difference >= CONTINUE_DIFFERENCE_LIMIT) { reason = 19; break; }
+            if (difference <= -CONTINUE_DIFFERENCE_LIMIT) { reason = 19; break; }
+            if (continueTotalA >= CONTINUE_COUNT_LIMIT) { reached = 1; }
+            if (continueTotalC >= CONTINUE_COUNT_LIMIT) { reached = 1; }
+            if (reached == 1)
+            {
+                // Stop at FIRST track reference, not after unbounded steering
+                // to compensate for the other track or to chase black.
+                reason = 17;
+                break;
+            }
+        }
+    }
+    Off(OUT_AC);
+    continueFinalLeft = Sensor(IN_3);
+    continueFinalRight = Sensor(IN_4);
+    if (reason == 17) { finalCheck = 1; }
+    if (reason == 18) { finalCheck = 1; }
+    if (reason == 19) { finalCheck = 1; }
+    if (reason == 20) { finalCheck = 1; }
+    if (finalCheck == 1)
+    {
+        if (reason == 17)
+        {
+            if (continueFinalLeft >= BLACK_THRESHOLD) { reason = 20; }
+            if (continueFinalRight >= BLACK_THRESHOLD) { reason = 20; }
+        }
+        if (continueFinalLeft >= BLACK_THRESHOLD)
+        {
+            if (continueFinalRight >= BLACK_THRESHOLD) { reason = 11; }
+        }
+        if (continueFinalLeft > WHITE_THRESHOLD) { reason = 1; }
+        if (continueFinalRight > WHITE_THRESHOLD) { reason = 1; }
+    }
+    return reason;
+}
+#endif

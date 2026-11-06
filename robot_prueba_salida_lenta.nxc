@@ -1,0 +1,11 @@
+// Silent bounded exit experiment, revision 37,102, same 39-field frame.
+// Preserve approach, positioning, pivot, confirmation and all stop guards.
+// Scale ONLY exit commands by 0.6: both-black 20/20 -> 12/12;
+// one-sided contact 0/15 -> 0/9, or 15/0 -> 9/0.
+// Ideal command-space curvature is unchanged; actual motion is unverified.
+// Keep the 50-interval cap: reaching it is NOT equal-distance validation.
+// No automatic second turn, recovery, reverse or sound.
+#define CORNER_REVISION 102
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#include "robot_prueba_codo.nxc"

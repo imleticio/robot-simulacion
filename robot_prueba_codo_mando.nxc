@@ -1,0 +1,21 @@
+// University practical: active pivot command, revision37,111,76field frame.
+// Preserve110geometry,power15,target743,375cap,40flatguard,exit/continuation.
+// Reassert Cforward15 once per pivot interval with RESET_NONE, retaining the
+// original baseline. Read commanded Cpower before/after; stop22if not confirmed.
+// Reasserting is NOT a second turn/search/retry and cannot fix frozen physics
+// or a lifted/input state. Power15readback is not proof of actual motion.
+// Keep all sensor/encoder/no-progress guards, brakes and silent terminal loop.
+#define CORNER_REVISION 111
+#define POSITION_COUNT_TARGET 0
+#define TURN_SAMPLE_LIMIT 375
+#define TURN_PROGRESS_GUARD 1
+#define TURN_REFRESH_COMMAND 1
+#define EXIT_STEPS 200
+#define EXIT_FORWARD_POWER 12
+#define EXIT_CORRECTION_POWER 9
+#define EXIT_MEASURE_ENCODERS 1
+#define EXIT_REQUIRE_PROGRESS 1
+#define EXIT_PROGRESS_TARGET 180
+#define EXIT_CENTER_SAMPLES 5
+#define ENABLE_CONTINUATION 1
+#include "robot_prueba_codo.nxc"
